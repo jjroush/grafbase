@@ -50,7 +50,7 @@ impl<'a> Plan<'a> {
     /// Prefer using Deref unless you need the 'a lifetime.
     #[allow(clippy::should_implement_trait)]
     pub(crate) fn as_ref(&self) -> &'a PlanRecord {
-        &self.ctx.operation_plan[self.id]
+        &self.ctx.plan[self.id]
     }
     pub(crate) fn required_fields(&self) -> RequiredFieldSet<'a> {
         self.as_ref().required_fields_record.walk(self.ctx)

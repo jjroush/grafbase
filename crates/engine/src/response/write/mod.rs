@@ -5,13 +5,14 @@ mod subgraph_response;
 use std::sync::Arc;
 
 use grafbase_telemetry::graphql::{GraphqlOperationAttributes, GraphqlResponseStatus};
+use operation::PositionedResponseKey;
 use schema::{ObjectDefinitionId, Schema};
 use walker::Walk;
 
 use super::{
     ConcreteShapeId, DataParts, ErrorCodeCounter, ErrorPathSegment, ExecutedResponse, GraphqlError,
-    InputResponseObjectSet, ObjectIdentifier, OutputResponseObjectSets, PositionedResponseKey, Response, ResponseData,
-    ResponseObject, ResponseObjectField, ResponseObjectId, ResponseObjectRef, ResponseValue, ResponseValueId,
+    InputResponseObjectSet, ObjectIdentifier, OutputResponseObjectSets, Response, ResponseData, ResponseObject,
+    ResponseObjectField, ResponseObjectId, ResponseObjectRef, ResponseValue, ResponseValueId,
 };
 use crate::{execution::ExecutionError, operation::Plan, prepare::CachedOperation};
 pub(crate) use subgraph_response::*;
@@ -33,7 +34,10 @@ impl ResponseBuilder {
     ) -> Self {
         let mut parts = DataParts::default();
         let mut initial_part = parts.new_part();
-        let root_id = initial_part.push_object(ResponseObject::new(Some(operation.solved.root_object_id), Vec::new()));
+        let root_id = initial_part.push_object(ResponseObject::new(
+            Some(operation.operation.root_object_id),
+            Vec::new(),
+        ));
         parts.insert(initial_part);
 
         Self {
@@ -188,7 +192,7 @@ impl ResponseBuilder {
                     }
                 }
                 (ErrorPathSegment::UnknownField(name), ResponseValueId::Field { key, .. }) => {
-                    if name != &self.operation.solved.response_keys[*key] {
+                    if name != &self.operation.operation.response_keys[*key] {
                         return false;
                     }
                 }

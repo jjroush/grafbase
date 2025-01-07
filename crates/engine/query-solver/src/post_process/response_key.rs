@@ -69,7 +69,7 @@ impl KeyGenerationContext<'_> {
         let mut stack = vec![(
             CompositeTypeId::from(self.operation.root_object_id),
             SubgraphId::Introspection,
-            self.query.root_ix,
+            self.query.root_node_ix,
         )];
         while let Some((parent_type, subgraph_id, node)) = stack.pop() {
             selection_set.clear();

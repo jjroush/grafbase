@@ -8,7 +8,7 @@ use schema::{
 };
 use walker::Walk;
 
-use crate::{FieldArguments, FieldFlags, QueryField};
+use crate::{FieldFlags, QueryField, QueryOrSchemaFieldArgumentIds};
 
 use super::{ProvidableField, QueryFieldId, QuerySolutionSpaceBuilder, Resolver, SpaceEdge, SpaceNode};
 
@@ -463,7 +463,7 @@ where
                     key: None,
                     subgraph_key: None,
                     definition_id: Some(required_item.field().definition_id),
-                    argument_ids: FieldArguments::Extra(required_item.field().sorted_argument_ids),
+                    argument_ids: QueryOrSchemaFieldArgumentIds::Schema(required_item.field().sorted_argument_ids),
                     location: self.query[petitioner_field_id].location,
                     directive_ids: Default::default(),
                 });
@@ -518,13 +518,13 @@ where
         query_field_node_ix: NodeIndex,
         query_field_id: QueryFieldId,
     ) {
-        if parent_query_field_node_ix == self.query.root_ix {
+        if parent_query_field_node_ix == self.query.root_node_ix {
             self.create_provideable_fields_task_stack
                 .push(CreateProvidableFieldsTask {
                     parent: Parent {
                         parent_query_field_node_ix,
                         parent_output_type,
-                        parent_providable_field_or_root_ix: self.query.root_ix,
+                        parent_providable_field_or_root_ix: self.query.root_node_ix,
                     },
                     query_field_node_ix,
                     query_field_id,
@@ -565,7 +565,7 @@ where
         }
 
         match actual.argument_ids {
-            FieldArguments::Original(argument_ids) => {
+            QueryOrSchemaFieldArgumentIds::Query(argument_ids) => {
                 if argument_ids.len() != required.sorted_argument_ids.len() {
                     return false;
                 }
@@ -585,7 +585,7 @@ where
                     }
                 }
             }
-            FieldArguments::Extra(argument_ids) => {
+            QueryOrSchemaFieldArgumentIds::Schema(argument_ids) => {
                 if argument_ids.len() != required.sorted_argument_ids.len() {
                     return false;
                 }

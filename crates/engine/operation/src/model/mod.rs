@@ -11,13 +11,15 @@ use std::sync::Arc;
 
 pub use directive::*;
 pub use generated::*;
-use grafbase_telemetry::graphql::{OperationName, OperationType};
+use grafbase_telemetry::graphql::{GraphqlOperationAttributes, OperationName, OperationType};
 pub use input_value::*;
 pub use location::*;
 pub use response_key::*;
 use schema::{ObjectDefinition, ObjectDefinitionId, Schema};
 pub use selection_set::*;
 use walker::{Iter, Walk};
+
+use crate::ComplexityCost;
 
 #[derive(serde::Serialize, serde::Deserialize, id_derives::IndexedFields)]
 pub struct Operation {
@@ -50,6 +52,17 @@ pub struct OperationAttributes {
     pub ty: OperationType,
     pub name: OperationName,
     pub sanitized_query: Arc<str>,
+}
+
+impl OperationAttributes {
+    pub fn with_complexity_cost(self, complexity_cost: Option<ComplexityCost>) -> GraphqlOperationAttributes {
+        GraphqlOperationAttributes {
+            ty: self.ty,
+            name: self.name,
+            sanitized_query: self.sanitized_query,
+            complexity_cost: complexity_cost.map(|c| c.0),
+        }
+    }
 }
 
 #[derive(id_derives::IndexedFields)]

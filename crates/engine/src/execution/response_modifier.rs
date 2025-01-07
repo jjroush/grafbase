@@ -22,7 +22,7 @@ impl<'ctx, R: Runtime> ExecutionContext<'ctx, R> {
             let Some(refs) = state[target.set_id].as_ref() else {
                 continue;
             };
-            let input = if self.operation.cached.solved[target.set_id].ty_id == target.ty_id {
+            let input = if self.operation.cached.query_plan[target.set_id].ty_id == target.ty_id {
                 InputResponseObjectSet::default().with_response_objects(refs.clone())
             } else {
                 InputResponseObjectSet::default().with_filtered_response_objects(

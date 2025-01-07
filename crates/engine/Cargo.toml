@@ -50,6 +50,7 @@ http.workspace = true
 headers.workspace = true
 
 engine-auth = { path = "./auth" }
+operation = { path = "./operation", package = "engine-operation" }
 operation-normalizer = { path = "../operation-normalizer" }
 config = { package = "engine-config", path = "./config" }
 schema = { path = "./schema", package = "engine-schema" }

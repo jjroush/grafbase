@@ -19,7 +19,7 @@ where
 {
     pub(super) fn ingest_operation_fields(&mut self) {
         let stack = vec![IngestSelectionSet {
-            parent_query_field_ix: self.query.root_ix,
+            parent_query_field_ix: self.query.root_node_ix,
             parent_output_type: CompositeTypeId::Object(self.operation.root_object_id),
             selection_set: self.ctx().root_selection_set(),
         }];

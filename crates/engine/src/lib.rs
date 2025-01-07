@@ -1,12 +1,10 @@
 #![deny(clippy::future_not_send)]
 
-pub mod analytics;
 mod engine;
 mod execution;
 mod graphql_over_http;
 mod operation;
 mod prepare;
-mod request;
 mod resolver;
 mod response;
 mod utils;

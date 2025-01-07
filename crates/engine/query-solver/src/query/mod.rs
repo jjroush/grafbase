@@ -66,7 +66,7 @@ pub type SolutionGraph = Graph<Node, Edge>;
 #[derive(id_derives::IndexedFields)]
 pub struct Query<G: GraphBase, Step> {
     pub(crate) step: PhantomData<Step>,
-    pub root_ix: G::NodeId,
+    pub root_node_ix: G::NodeId,
     pub graph: G,
     #[indexed_by(QueryFieldId)]
     pub fields: Vec<QueryField>,
@@ -79,7 +79,7 @@ pub struct Query<G: GraphBase, Step> {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, id_derives::Id)]
 pub struct QueryFieldId(u32);
 
-#[derive(Clone, Copy, id_derives::Id)]
+#[derive(Clone, Copy, id_derives::Id, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TypeConditionSharedVecId(u32);
 
 #[derive(Clone, Copy, id_derives::Id)]
@@ -93,32 +93,32 @@ pub struct QueryField {
     pub subgraph_key: Option<ResponseKey>,
     // If absent it's a typename field.
     pub definition_id: Option<FieldDefinitionId>,
-    pub argument_ids: FieldArguments,
+    pub argument_ids: QueryOrSchemaFieldArgumentIds,
     pub location: Location,
     pub directive_ids: IdRange<DirectiveSharedVecId>,
 }
 
-#[derive(Clone)]
-pub enum FieldArguments {
-    Original(IdRange<FieldArgumentId>),
-    Extra(IdRange<SchemaFieldArgumentId>),
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub enum QueryOrSchemaFieldArgumentIds {
+    Query(IdRange<FieldArgumentId>),
+    Schema(IdRange<SchemaFieldArgumentId>),
 }
 
-impl Default for FieldArguments {
+impl Default for QueryOrSchemaFieldArgumentIds {
     fn default() -> Self {
-        FieldArguments::Original(IdRange::empty())
+        QueryOrSchemaFieldArgumentIds::Query(IdRange::empty())
     }
 }
 
-impl From<IdRange<FieldArgumentId>> for FieldArguments {
+impl From<IdRange<FieldArgumentId>> for QueryOrSchemaFieldArgumentIds {
     fn from(ids: IdRange<FieldArgumentId>) -> Self {
-        FieldArguments::Original(ids)
+        QueryOrSchemaFieldArgumentIds::Query(ids)
     }
 }
 
-impl From<IdRange<SchemaFieldArgumentId>> for FieldArguments {
+impl From<IdRange<SchemaFieldArgumentId>> for QueryOrSchemaFieldArgumentIds {
     fn from(ids: IdRange<SchemaFieldArgumentId>) -> Self {
-        FieldArguments::Extra(ids)
+        QueryOrSchemaFieldArgumentIds::Schema(ids)
     }
 }
 

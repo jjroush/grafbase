@@ -1,15 +1,13 @@
 use std::num::NonZero;
 
 use id_newtypes::{BitSet, IdToMany};
+use operation::InputValueContext;
 use schema::{RequiresScopeSetIndex, RequiresScopesDirectiveId};
 use serde::Deserialize;
 use walker::Walk;
 
 use crate::{
-    operation::{
-        DataFieldId, Field, InputValueContext, QueryModifierDefinition, QueryModifierRule, SkipIncludeDirective,
-        SolvedOperationContext, TypenameFieldId, Variables,
-    },
+    operation::{CachedOperationContext, PartitionDataFieldId, PartitionTypenameFieldId},
     prepare::{CachedOperation, PrepareContext},
     response::{ConcreteShapeId, ErrorCode, FieldShapeId, GraphqlError},
     Runtime,
@@ -21,8 +19,8 @@ use super::PlanResult;
 #[derive(Default, id_derives::IndexedFields)]
 pub(crate) struct QueryModifications {
     pub is_any_field_skipped: bool,
-    pub skipped_data_fields: BitSet<DataFieldId>,
-    pub skipped_typename_fields: BitSet<TypenameFieldId>,
+    pub skipped_data_fields: BitSet<PartitionDataFieldId>,
+    pub skipped_typename_fields: BitSet<PartitionTypenameFieldId>,
     #[indexed_by(ErrorId)]
     pub errors: Vec<GraphqlError>,
     pub concrete_shape_has_error: BitSet<ConcreteShapeId>,
@@ -42,12 +40,12 @@ impl QueryModifications {
         operation: &CachedOperation,
         variables: &Variables,
     ) -> PlanResult<Self> {
-        let operation = &operation.solved;
+        let operation = &operation.query_plan;
         Builder {
             ctx,
-            operation_ctx: SolvedOperationContext {
+            operation_ctx: CachedOperationContext {
                 schema: ctx.schema(),
-                operation,
+                query_plan: operation,
             },
             input_value_ctx: InputValueContext {
                 schema: ctx.schema(),
@@ -84,7 +82,7 @@ impl QueryModifications {
 
 struct Builder<'ctx, 'op, R: Runtime> {
     ctx: &'op PrepareContext<'ctx, R>,
-    operation_ctx: SolvedOperationContext<'op>,
+    operation_ctx: CachedOperationContext<'op>,
     input_value_ctx: InputValueContext<'op>,
     field_shape_id_to_error_ids: Vec<(FieldShapeId, ErrorId)>,
     modifications: QueryModifications,
@@ -99,7 +97,7 @@ where
 
         for modifier in self
             .operation_ctx
-            .operation
+            .query_plan
             .query_modifier_definitions
             .walk(self.operation_ctx)
         {
@@ -200,7 +198,7 @@ where
         self.modifications.field_shape_id_to_error_ids = self.field_shape_id_to_error_ids.into();
         let mut field_shape_ids_with_errors = self.modifications.field_shape_id_to_error_ids.ids();
         if let Some(mut current) = field_shape_ids_with_errors.next() {
-            'outer: for (concrete_shape_id, shape) in self.operation_ctx.operation.shapes.concrete.iter().enumerate() {
+            'outer: for (concrete_shape_id, shape) in self.operation_ctx.query_plan.shapes.concrete.iter().enumerate() {
                 if current < shape.field_shape_ids.end {
                     let mut i = 0;
                     while let Some(field_shape_id) = shape.field_shape_ids.get(i) {

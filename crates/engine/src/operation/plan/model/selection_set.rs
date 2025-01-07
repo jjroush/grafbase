@@ -25,7 +25,7 @@ impl<'a> PlanSelectionSet<'a> {
         self.item
             .data_field_ids_ordered_by_parent_entity_id_then_key
             .into_iter()
-            .filter(|id| !self.ctx.operation_plan.query_modifications.skipped_data_fields[*id])
+            .filter(|id| !self.ctx.plan.query_modifications.skipped_data_fields[*id])
             .map(move |id| PlanDataField { ctx, id })
     }
 

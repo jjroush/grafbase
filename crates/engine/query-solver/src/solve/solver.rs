@@ -90,7 +90,7 @@ where
             &query_solution_space.graph,
             node_filter,
             edge_filter,
-            query_solution_space.root_ix,
+            query_solution_space.root_node_ix,
             terminals,
         );
 

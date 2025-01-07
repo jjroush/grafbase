@@ -70,3 +70,4 @@ scalar IncludeDirective @record
 union ExecutableDirective @id @meta(module: "directive") @variants(remove_suffix: "Directive") =
   | SkipDirective
   | IncludeDirective
+

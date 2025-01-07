@@ -10,11 +10,13 @@ mod selection_set;
 use std::sync::Arc;
 
 use id_newtypes::IdRange;
+use operation::Operation;
 use schema::{EntityDefinitionId, FieldSetRecord, Schema};
 use walker::{Iter, Walk};
 
 use crate::{
-    operation::{ResponseModifierRule, SolvedOperation, SolvedOperationContext, Variables},
+    operation::{CachedOperationContext, QueryPlan, ResponseModifierRule},
+    prepare::CachedOperation,
     resolver::Resolver,
     response::Shapes,
 };
@@ -30,15 +32,15 @@ pub(crate) use selection_set::*;
 #[derive(Clone, Copy)]
 pub(crate) struct OperationPlanContext<'a> {
     pub schema: &'a Schema,
-    pub solved_operation: &'a SolvedOperation,
-    pub operation_plan: &'a OperationPlan,
+    pub cached: &'a CachedOperation,
+    pub plan: &'a OperationPlan,
 }
 
-impl<'ctx> From<OperationPlanContext<'ctx>> for SolvedOperationContext<'ctx> {
+impl<'ctx> From<OperationPlanContext<'ctx>> for CachedOperationContext<'ctx> {
     fn from(ctx: OperationPlanContext<'ctx>) -> Self {
-        SolvedOperationContext {
+        CachedOperationContext {
             schema: ctx.schema,
-            operation: ctx.solved_operation,
+            cached: ctx.cached,
         }
     }
 }
@@ -51,13 +53,13 @@ impl<'ctx> From<OperationPlanContext<'ctx>> for &'ctx Schema {
 
 impl<'ctx> From<OperationPlanContext<'ctx>> for &'ctx Shapes {
     fn from(ctx: OperationPlanContext<'ctx>) -> Self {
-        &ctx.solved_operation.shapes
+        &ctx.cached.query_plan.shapes
     }
 }
 
 impl<'a> OperationPlanContext<'a> {
     pub fn plans(&self) -> impl Iter<Item = Plan<'a>> + 'a {
-        IdRange::<PlanId>::from(0..self.operation_plan.plans.len()).walk(*self)
+        IdRange::<PlanId>::from(0..self.plan.plans.len()).walk(*self)
     }
 }
 

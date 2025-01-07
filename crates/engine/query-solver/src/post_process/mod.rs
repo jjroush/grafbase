@@ -20,7 +20,7 @@ pub(crate) fn post_process(schema: &Schema, operation: &mut Operation, mut query
         // the root selection set.
         partition_cycles::split_query_partition_dependency_cycles(&mut query, root_fields);
     } else {
-        let starting_nodes = vec![query.root_ix];
+        let starting_nodes = vec![query.root_node_ix];
         partition_cycles::split_query_partition_dependency_cycles(&mut query, starting_nodes);
     }
 
@@ -29,7 +29,7 @@ pub(crate) fn post_process(schema: &Schema, operation: &mut Operation, mut query
     let query = SolvedQuery {
         step: PhantomData,
         graph: query.graph,
-        root_ix: query.root_ix,
+        root_node_ix: query.root_node_ix,
         fields: query.fields,
         shared_type_conditions: query.shared_type_conditions,
         shared_directives: query.shared_directives,

@@ -13,3 +13,9 @@ pub struct InputValueContext<'a> {
     pub query_input_values: &'a QueryInputValues,
     pub variables: &'a Variables,
 }
+
+impl<'a> From<InputValueContext<'a>> for &'a Schema {
+    fn from(ctx: InputValueContext<'a>) -> Self {
+        ctx.schema
+    }
+}

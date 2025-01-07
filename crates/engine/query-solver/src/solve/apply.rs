@@ -24,7 +24,7 @@ pub(crate) fn generate_crude_solved_query(
 
     let mut stack = Vec::new();
 
-    for edge in query.graph.edges(query.root_ix) {
+    for edge in query.graph.edges(query.root_node_ix) {
         match edge.weight() {
             SpaceEdge::CreateChildResolver => {
                 stack.push((root_node_ix, edge.target()));
@@ -165,7 +165,7 @@ pub(crate) fn generate_crude_solved_query(
     }
     let query = CrudeSolvedQuery {
         step: PhantomData,
-        root_ix: root_node_ix,
+        root_node_ix,
         graph,
         fields: query.fields,
         shared_type_conditions: query.shared_type_conditions,

@@ -1,0 +1,84 @@
+scalar QueryPlan
+  @domain(
+    destination: "src/prepare/cached/query_plan/model"
+    root_module: "prepare/cached/query_plan/model"
+    context_type: "CachedOperationContext"
+    context_name: "ctx"
+    domain_accessor: "ctx.cached.query_plan"
+    visibility: "(crate)"
+    imports: [{ module: "schema", domain: "schema" }, { module: "operation", domain: "operation" }]
+  )
+
+scalar String @prelude
+scalar FieldShapeRefId @id
+
+# ------------------
+# - QueryPartition -
+# ------------------
+
+scalar ConcreteShapeId @prelude @id
+
+type QueryPartition @indexed(id_size: "u16") @meta(module: "query_partition") {
+  entity_definition: EntityDefinition!
+  resolver_definition: ResolverDefinition!
+  selection_set: SelectionSet!
+  required_fields: RequiredFieldSet!
+  input: ResponseObjectSetDefinition!
+  shape_id: ConcreteShapeId!
+}
+
+type ResponseObjectSetDefinition @meta(module: "response_object_set") @indexed(id_size: "u16", deduplicated: true) {
+  ty: CompositeType!
+}
+
+# ----------------
+# - SelectionSet -
+# ----------------
+
+scalar RequiredFieldSet @record
+
+type SelectionSet @meta(module: "selection_set", derive: ["Default"]) @copy {
+  data_fields_ordered_by_parent_entity_id_then_key: [PartitionDataField!]!
+    @field(record_field_name: "data_field_ids_ordered_by_parent_entity_id_then_key")
+  typename_fields_ordered_by_type_condition_id_then_key: [PartitionTypenameField!]!
+    @field(record_field_name: "typename_field_ids_ordered_by_type_condition_id_then_key")
+}
+
+scalar PartitionDataField @record @indexed
+scalar PartitionTypenameField @record @indexed
+
+union PartitionField @id @meta(module: "field") @variants(remove_suffix: "Field") =
+  | PartitionDataField
+  | PartitionTypenameField
+
+# "In opposition to a __typename field this field does retrieve data from a subgraph"
+# type PartitionDataField @meta(module: "field/data", debug: false) @indexed(id_size: "u32") {
+#   data_field: DataField!
+#   required_fields: RequiredFieldSet!
+#   "Requirement of @authorized, etc."
+#   required_fields_by_supergraph: RequiredFieldSet! @field(record_field_name: "required_fields_record_by_supergraph")
+#   "All field shape ids generated for this field"
+#   shape_ids: [FieldShapeRefId!]!
+#   parent_field_output: ResponseObjectSetDefinition
+#   output: ResponseObjectSetDefinition
+#   selection_set: SelectionSet!
+#   "Whether __typename should be requested from the subgraph for this selection set"
+#   selection_set_requires_typename: Boolean!
+#   query_partition: QueryPartition!
+# }
+#
+# type PartitionTypenameField @meta(module: "field/typename") @indexed(id_size: "u32") {
+#
+# }
+
+# ------------
+# - Modifier -
+# ------------
+
+scalar QueryModifierRule
+
+type QueryModifierDefinition @meta(module: "modifier") {
+  rule: QueryModifierRule!
+  impacts_root_object: Boolean!
+  impacted_fields: [PartitionField!]!
+}

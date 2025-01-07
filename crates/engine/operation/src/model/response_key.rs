@@ -37,9 +37,9 @@ impl PartialOrd for PositionedResponseKey {
 }
 
 impl ResponseKey {
-    pub fn with_position(self, query_position: QueryPosition) -> PositionedResponseKey {
+    pub fn with_position(self, query_position: Option<QueryPosition>) -> PositionedResponseKey {
         PositionedResponseKey {
-            query_position: Some(query_position),
+            query_position,
             response_key: self,
         }
     }

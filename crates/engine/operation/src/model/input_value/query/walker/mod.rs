@@ -2,12 +2,12 @@ mod de;
 mod debug;
 mod ser;
 
-use schema::{InputValueSet, SchemaInputValue, SchemaInputValueRecord};
+use schema::{InputValueSet, SchemaInputValue, SchemaInputValueId, SchemaInputValueRecord};
 use walker::Walk;
 
 use crate::{InputValueContext, VariableDefinitionId};
 
-use super::{QueryInputValueRecord, QueryInputValueView};
+use super::{QueryInputValueId, QueryInputValueRecord, QueryInputValueView};
 
 #[derive(Clone, Copy)]
 pub struct QueryInputValue<'a> {
@@ -17,8 +17,8 @@ pub struct QueryInputValue<'a> {
 
 impl<'a> QueryInputValue<'a> {
     /// Used for GraphQL query generation to only include values in the query string that would be
-    /// present after query normalization.
-    pub fn to_normalized_query_const_value_str(self) -> Option<&'a str> {
+    /// present after query sanitization.
+    pub fn to_sanitized_query_const_value_str(self) -> Option<&'a str> {
         Some(match self.ref_ {
             QueryInputValueRecord::EnumValue(id) => self.ctx.schema.walk(*id).name(),
             QueryInputValueRecord::Boolean(b) => {
@@ -76,8 +76,54 @@ impl<'a> QueryInputValue<'a> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+pub enum QueryOrSchemaInputValueId {
+    Query(QueryInputValueId),
+    Schema(SchemaInputValueId),
+}
+
+impl From<QueryInputValueId> for QueryOrSchemaInputValueId {
+    fn from(id: QueryInputValueId) -> Self {
+        QueryOrSchemaInputValueId::Query(id)
+    }
+}
+
+impl From<SchemaInputValueId> for QueryOrSchemaInputValueId {
+    fn from(id: SchemaInputValueId) -> Self {
+        QueryOrSchemaInputValueId::Schema(id)
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum QueryOrSchemaInputValue<'a> {
     Query(QueryInputValue<'a>),
     Schema(SchemaInputValue<'a>),
+}
+
+impl QueryOrSchemaInputValue<'_> {
+    pub fn is_undefined(&self) -> bool {
+        match self {
+            QueryOrSchemaInputValue::Query(value) => value.is_undefined(),
+            QueryOrSchemaInputValue::Schema(_) => false,
+        }
+    }
+}
+
+impl<'a> Walk<InputValueContext<'a>> for QueryOrSchemaInputValueId {
+    type Walker<'w>
+        = QueryOrSchemaInputValue<'w>
+    where
+        'a: 'w;
+
+    fn walk<'w>(self, ctx: impl Into<InputValueContext<'a>>) -> Self::Walker<'w>
+    where
+        Self: 'w,
+        'a: 'w,
+    {
+        let ctx: InputValueContext<'a> = ctx.into();
+        match self {
+            QueryOrSchemaInputValueId::Query(id) => QueryOrSchemaInputValue::Query(id.walk(ctx)),
+            QueryOrSchemaInputValueId::Schema(id) => QueryOrSchemaInputValue::Schema(id.walk(ctx)),
+        }
+    }
 }

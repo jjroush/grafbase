@@ -17,6 +17,7 @@ pub use error::*;
 pub use model::*;
 pub use request::*;
 use schema::Schema;
+pub use validation::complexity::{ComplexityCost, ComplexityError};
 
 impl Operation {
     pub fn parse(schema: &Schema, operation_name: Option<&str>, document: &str) -> Result<Operation> {
@@ -37,6 +38,20 @@ impl Operation {
         }
 
         Ok(operation)
+    }
+
+    pub fn compute_and_validate_complexity(
+        &self,
+        schema: &Schema,
+        variables: &Variables,
+    ) -> std::result::Result<Option<ComplexityCost>, ComplexityError> {
+        validation::complexity::compute_and_validate_complexity(
+            OperationContext {
+                schema,
+                operation: self,
+            },
+            variables,
+        )
     }
 }
 

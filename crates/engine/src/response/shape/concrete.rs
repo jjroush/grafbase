@@ -1,13 +1,11 @@
 use std::num::NonZero;
 
 use id_newtypes::IdRange;
+use operation::PositionedResponseKey;
 use schema::{InterfaceDefinitionId, ObjectDefinitionId, UnionDefinitionId};
 use walker::{Iter, Walk};
 
-use crate::{
-    operation::{OperationPlanContext, ResponseObjectSetDefinitionId},
-    response::PositionedResponseKey,
-};
+use crate::operation::{OperationPlanContext, ResponseObjectSetDefinitionId};
 
 use super::{FieldShape, FieldShapeId};
 
@@ -60,10 +58,10 @@ impl<'a> ConcreteShape<'a> {
     /// Prefer using Deref unless you need the 'a lifetime.
     #[allow(clippy::should_implement_trait)]
     pub(crate) fn as_ref(&self) -> &'a ConcreteShapeRecord {
-        &self.ctx.solved_operation.shapes[self.id]
+        &self.ctx.cached.query_plan.shapes[self.id]
     }
     pub(crate) fn has_errors(&self) -> bool {
-        self.ctx.operation_plan.query_modifications.concrete_shape_has_error[self.id]
+        self.ctx.plan.query_modifications.concrete_shape_has_error[self.id]
     }
     pub(crate) fn fields(&self) -> impl Iter<Item = FieldShape<'a>> + 'a {
         self.as_ref().field_shape_ids.walk(self.ctx)

@@ -1,11 +1,12 @@
 use std::num::NonZero;
 
+use operation::{PositionedResponseKey, ResponseKey};
 use schema::{EnumDefinitionId, ScalarType, Wrapping};
 use walker::Walk;
 
 use crate::{
-    operation::{DataFieldId, OperationPlanContext},
-    response::{GraphqlError, PositionedResponseKey, ResponseKey},
+    operation::{OperationPlanContext, PartitionDataFieldId},
+    response::GraphqlError,
 };
 
 use super::{ConcreteShapeId, PolymorphicShapeId};
@@ -14,7 +15,7 @@ use super::{ConcreteShapeId, PolymorphicShapeId};
 pub(crate) struct FieldShapeRecord {
     pub expected_key: ResponseKey,
     pub key: PositionedResponseKey,
-    pub id: DataFieldId,
+    pub id: PartitionDataFieldId,
     pub shape: Shape,
     pub wrapping: Wrapping,
 }
@@ -57,21 +58,21 @@ impl<'a> FieldShape<'a> {
     /// Prefer using Deref unless you need the 'a lifetime.
     #[allow(clippy::should_implement_trait)]
     pub(crate) fn as_ref(&self) -> &'a FieldShapeRecord {
-        &self.ctx.solved_operation.shapes[self.id]
+        &self.ctx.cached.query_plan.shapes[self.id]
     }
 
     pub(crate) fn errors(&self) -> impl Iterator<Item = &'a GraphqlError> + 'a {
         self.ctx
-            .operation_plan
+            .plan
             .query_modifications
             .field_shape_id_to_error_ids
             .find_all(self.id)
             .copied()
-            .map(|id| &self.ctx.operation_plan.query_modifications[id])
+            .map(|id| &self.ctx.plan.query_modifications[id])
     }
 
     pub(crate) fn is_skipped(&self) -> bool {
-        self.ctx.operation_plan.query_modifications.skipped_field_shapes[self.id]
+        self.ctx.plan.query_modifications.skipped_field_shapes[self.id]
     }
 }
 

@@ -5,9 +5,10 @@ use std::{
 
 use grafbase_telemetry::graphql::OperationType;
 use itertools::Itertools;
+use operation::QueryOrSchemaInputValueId;
 use schema::{CompositeType, EntityDefinition, SubgraphId};
 
-use crate::operation::{FieldArgument, PlanDataField, PlanQueryPartition, PlanSelectionSet, QueryInputValueId};
+use crate::operation::{PartitionFieldArguments, PlanDataField, PlanQueryPartition, PlanSelectionSet};
 
 const VARIABLE_PREFIX: &str = "var";
 
@@ -106,10 +107,10 @@ impl PreparedFederationEntityOperation {
 /// All variables associated with a subgraph query. Each one is associated with the variable name
 /// "{$VARIABLE_PREFIX}{idx}" with `idx` being the position of the input value in the inner vec.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub(crate) struct QueryVariables(Vec<QueryInputValueId>);
+pub(crate) struct QueryVariables(Vec<QueryOrSchemaInputValueId>);
 
 impl QueryVariables {
-    pub fn iter(&self) -> impl Iterator<Item = (String, QueryInputValueId)> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = (String, QueryOrSchemaInputValueId)> + '_ {
         self.0
             .iter()
             .enumerate()
@@ -124,7 +125,7 @@ struct QueryVariable {
 
 struct QueryBuilderContext {
     subgraph_id: SubgraphId,
-    variables: HashMap<QueryInputValueId, QueryVariable>,
+    variables: HashMap<QueryOrSchemaInputValueId, QueryVariable>,
     estimated_variable_definitions_string_len: usize,
 }
 
@@ -343,7 +344,7 @@ impl QueryBuilderContext {
     fn write_arguments<'a>(
         &mut self,
         buffer: &mut String,
-        arguments: impl ExactSizeIterator<Item = FieldArgument<'a>>,
+        arguments: PartitionFieldArguments<'a>,
     ) -> Result<(), Error> {
         if arguments.len() != 0 {
             write!(

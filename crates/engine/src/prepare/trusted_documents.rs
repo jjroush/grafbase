@@ -2,12 +2,12 @@
 
 use crate::{
     engine::cache::{Document, Key},
-    request::{extensions::PersistedQueryRequestExtension, Request},
     response::{ErrorCode, GraphqlError},
     Engine, Runtime,
 };
 use futures::{future::BoxFuture, FutureExt};
 use grafbase_telemetry::grafbase_client::X_GRAFBASE_CLIENT_NAME;
+use operation::{extensions::PersistedQueryRequestExtension, Request};
 use runtime::trusted_documents_client::TrustedDocumentsError;
 use std::borrow::Cow;
 

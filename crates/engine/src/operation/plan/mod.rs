@@ -5,6 +5,7 @@ mod query_modifications;
 
 pub(crate) use error::*;
 pub(crate) use model::*;
+use operation::Variables;
 pub(crate) use query_modifications::*;
 
 use crate::{

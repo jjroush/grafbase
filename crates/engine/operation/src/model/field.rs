@@ -1,6 +1,10 @@
+use schema::SchemaInputValueRecord;
 use walker::Walk;
 
-use super::{DataField, ExecutableDirectiveId, Field, SelectionSet, SelectionSetRecord, TypenameField};
+use super::{
+    DataField, ExecutableDirectiveId, Field, FieldArgument, InputValueContext, QueryInputValue, QueryInputValueRecord,
+    SelectionSet, SelectionSetRecord, TypenameField, Variables,
+};
 
 impl<'a> DataField<'a> {
     pub fn key_str(&self) -> &'a str {
@@ -33,5 +37,46 @@ impl<'a> Field<'a> {
             Field::Data(data) => data.as_ref().directive_ids.as_slice(),
             Field::Typename(typename) => typename.as_ref().directive_ids.as_slice(),
         }
+    }
+}
+
+impl<'a> FieldArgument<'a> {
+    pub fn value<'v>(&self, variables: &'v Variables) -> QueryInputValue<'v>
+    where
+        'a: 'v,
+    {
+        let ctx = InputValueContext {
+            schema: self.ctx.schema,
+            query_input_values: &self.ctx.operation.query_input_values,
+            variables,
+        };
+        self.as_ref().value_id.walk(ctx)
+    }
+
+    /// Used for GraphQL query generation to only include values in the query string that would be
+    /// present after query sanitization.
+    pub fn value_as_sanitized_query_const_value_str(&self) -> Option<&'a str> {
+        Some(match &self.ctx.operation.query_input_values[self.value_id] {
+            QueryInputValueRecord::EnumValue(id) => self.ctx.schema.walk(*id).name(),
+            QueryInputValueRecord::Boolean(b) => {
+                if *b {
+                    "true"
+                } else {
+                    "false"
+                }
+            }
+            QueryInputValueRecord::DefaultValue(id) => match &self.ctx.schema[*id] {
+                SchemaInputValueRecord::EnumValue(id) => self.ctx.schema.walk(*id).name(),
+                SchemaInputValueRecord::Boolean(b) => {
+                    if *b {
+                        "true"
+                    } else {
+                        "false"
+                    }
+                }
+                _ => return None,
+            },
+            _ => return None,
+        })
     }
 }
