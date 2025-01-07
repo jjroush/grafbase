@@ -5,7 +5,7 @@
 //! Source file: <engine-codegen dir>/domain/operation_plan.graphql
 mod target;
 
-use crate::operation::plan::model::{
+use crate::prepare::operation_plan::model::{
     generated::{Executable, ExecutableId},
     prelude::*,
 };
@@ -35,7 +35,7 @@ pub(crate) struct ResponseModifierId(std::num::NonZero<u16>);
 
 #[derive(Clone, Copy)]
 pub(crate) struct ResponseModifier<'a> {
-    pub(in crate::operation::plan::model) ctx: OperationPlanContext<'a>,
+    pub(in crate::prepare::operation_plan::model) ctx: OperationPlanContext<'a>,
     pub(crate) id: ResponseModifierId,
 }
 
@@ -51,7 +51,7 @@ impl<'a> ResponseModifier<'a> {
     /// Prefer using Deref unless you need the 'a lifetime.
     #[allow(clippy::should_implement_trait)]
     pub(crate) fn as_ref(&self) -> &'a ResponseModifierRecord {
-        &self.ctx.plan[self.id]
+        &self.ctx.operation_plan[self.id]
     }
     pub(crate) fn sorted_targets(&self) -> impl Iter<Item = ResponseModifierTarget<'a>> + 'a {
         self.as_ref().sorted_target_records.walk(self.ctx)

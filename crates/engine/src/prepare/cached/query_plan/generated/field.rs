@@ -3,7 +3,7 @@
 //! ===================
 //! Generated with: `cargo run -p engine-codegen`
 //! Source file: <engine-codegen dir>/domain/query_plan.graphql
-use crate::prepare::cached::query_plan::model::{
+use crate::prepare::cached::query_plan::{
     prelude::*, PartitionDataField, PartitionDataFieldId, PartitionTypenameField, PartitionTypenameFieldId,
 };
 use walker::Walk;

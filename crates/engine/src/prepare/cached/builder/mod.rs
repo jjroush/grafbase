@@ -11,22 +11,11 @@ use query_solver::{
 use schema::{CompositeType, CompositeTypeId, Definition, EntityDefinitionId, ResolverDefinitionId, Schema};
 use walker::Walk;
 
-use crate::{operation::SolveError, prepare::CachedOperation};
+use super::*;
 use crate::{
     response::{ConcreteShapeId, Shapes},
     utils::BufferPool,
 };
-
-use super::PartitionDataFieldId;
-use super::PartitionDataFieldRecord;
-use super::PartitionTypenameFieldRecord;
-use super::QueryPartitionId;
-use super::QueryPartitionRecord;
-use super::QueryPlan;
-use super::RequiredFieldSetRecord;
-use super::ResponseObjectSetDefinitionId;
-use super::SelectionSetRecord;
-use super::SolveResult;
 
 pub(super) struct Solver<'a> {
     schema: &'a Schema,

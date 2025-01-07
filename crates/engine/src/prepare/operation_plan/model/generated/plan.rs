@@ -3,7 +3,7 @@
 //! ===================
 //! Generated with: `cargo run -p engine-codegen`
 //! Source file: <engine-codegen dir>/domain/operation_plan.graphql
-use crate::operation::plan::model::{
+use crate::prepare::operation_plan::model::{
     generated::{Executable, ExecutableId},
     prelude::*,
 };
@@ -34,7 +34,7 @@ pub(crate) struct PlanId(std::num::NonZero<u16>);
 
 #[derive(Clone, Copy)]
 pub(crate) struct Plan<'a> {
-    pub(in crate::operation::plan::model) ctx: OperationPlanContext<'a>,
+    pub(in crate::prepare::operation_plan::model) ctx: OperationPlanContext<'a>,
     pub(crate) id: PlanId,
 }
 
@@ -50,7 +50,7 @@ impl<'a> Plan<'a> {
     /// Prefer using Deref unless you need the 'a lifetime.
     #[allow(clippy::should_implement_trait)]
     pub(crate) fn as_ref(&self) -> &'a PlanRecord {
-        &self.ctx.plan[self.id]
+        &self.ctx.operation_plan[self.id]
     }
     pub(crate) fn required_fields(&self) -> RequiredFieldSet<'a> {
         self.as_ref().required_fields_record.walk(self.ctx)

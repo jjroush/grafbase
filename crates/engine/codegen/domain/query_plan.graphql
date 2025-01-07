@@ -1,7 +1,7 @@
 scalar QueryPlan
   @domain(
-    destination: "src/prepare/cached/query_plan/model"
-    root_module: "prepare/cached/query_plan/model"
+    destination: "src/prepare/cached/query_plan"
+    root_module: "prepare/cached/query_plan"
     context_type: "CachedOperationContext"
     context_name: "ctx"
     domain_accessor: "ctx.cached.query_plan"

@@ -2106,6 +2106,7 @@ dependencies = [
  "engine-config",
  "engine-id-derives",
  "engine-id-newtypes",
+ "engine-operation",
  "engine-query-solver",
  "engine-schema",
  "engine-walker",
@@ -2260,6 +2261,7 @@ version = "0.0.0"
 dependencies = [
  "blake3",
  "cynic-parser",
+ "engine-config",
  "engine-id-derives",
  "engine-id-newtypes",
  "engine-schema",
@@ -2274,6 +2276,7 @@ dependencies = [
  "serde_with",
  "strum",
  "thiserror 2.0.6",
+ "tracing",
 ]
 
 [[package]]
@@ -2293,6 +2296,7 @@ dependencies = [
  "insta",
  "itertools 0.13.0",
  "petgraph",
+ "serde",
  "similar",
  "strum",
  "thiserror 2.0.6",

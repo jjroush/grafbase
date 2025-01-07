@@ -20,7 +20,7 @@ pub(crate) struct PartitionTypenameFieldId(u16);
 /// __typename field
 #[derive(Clone, Copy)]
 pub(crate) struct PartitionTypenameField<'a> {
-    pub(in crate::prepare::cached::query_plan::model) ctx: CachedOperationContext<'a>,
+    pub(in crate::prepare::cached::query_plan) ctx: CachedOperationContext<'a>,
     pub(crate) id: PartitionTypenameFieldId,
 }
 

@@ -3,7 +3,7 @@
 //! ===================
 //! Generated with: `cargo run -p engine-codegen`
 //! Source file: <engine-codegen dir>/domain/query_plan.graphql
-use crate::prepare::cached::query_plan::model::{
+use crate::prepare::cached::query_plan::{
     generated::{PartitionField, PartitionFieldId},
     prelude::*,
     QueryModifierRule,
@@ -28,8 +28,8 @@ pub(crate) struct QueryModifierDefinitionRecord {
 
 #[derive(Clone, Copy)]
 pub(crate) struct QueryModifierDefinition<'a> {
-    pub(in crate::prepare::cached::query_plan::model) ctx: CachedOperationContext<'a>,
-    pub(in crate::prepare::cached::query_plan::model) ref_: &'a QueryModifierDefinitionRecord,
+    pub(in crate::prepare::cached::query_plan) ctx: CachedOperationContext<'a>,
+    pub(in crate::prepare::cached::query_plan) ref_: &'a QueryModifierDefinitionRecord,
 }
 
 impl std::ops::Deref for QueryModifierDefinition<'_> {

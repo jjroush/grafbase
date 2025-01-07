@@ -23,7 +23,7 @@ pub(crate) struct CachedOperation {
 /// 2. Take the SolutionGraph and the BoundOperation to create all the QueryPartitions in the SolvedOperation
 /// 3. Compute all the field shapes for each partition.
 pub(crate) fn solve(schema: &Schema, operation: Operation) -> SolveResult<CachedOperation> {
-    solver::Solver::build(schema, operation)?.solve()
+    builder::Solver::build(schema, operation)?.solve()
 }
 
 #[derive(Clone, Copy)]

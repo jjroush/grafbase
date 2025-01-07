@@ -3,7 +3,7 @@
 //! ===================
 //! Generated with: `cargo run -p engine-codegen`
 //! Source file: <engine-codegen dir>/domain/operation_plan.graphql
-use crate::operation::plan::model::{
+use crate::prepare::operation_plan::model::{
     generated::{Plan, PlanId, ResponseModifier, ResponseModifierId},
     prelude::*,
 };

@@ -43,7 +43,7 @@ pub(crate) struct PartitionDataFieldId(u16);
 /// In opposition to a __typename field this field does retrieve data from a subgraph
 #[derive(Clone, Copy)]
 pub(crate) struct PartitionDataField<'a> {
-    pub(in crate::prepare::cached::query_plan::model) ctx: CachedOperationContext<'a>,
+    pub(in crate::prepare::cached::query_plan) ctx: CachedOperationContext<'a>,
     pub(crate) id: PartitionDataFieldId,
 }
 

@@ -2,7 +2,7 @@ use schema::{EntityDefinition, FieldSetRecord, ResolverDefinition};
 use walker::Walk;
 
 use crate::{
-    operation::{QueryPartition, ResponseObjectSetDefinitionId},
+    prepare::{QueryPartition, ResponseObjectSetDefinitionId},
     resolver::Resolver,
     response::{ConcreteShape, ConcreteShapeId},
 };

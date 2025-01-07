@@ -4,7 +4,7 @@ use query_solver::{
     Edge,
 };
 
-use crate::operation::{PartitionDataFieldId, RequiredFieldSetItemRecord, RequiredFieldSetRecord, SolveResult};
+use super::{PartitionDataFieldId, RequiredFieldSetItemRecord, RequiredFieldSetRecord, SolveResult};
 
 use super::Solver;
 

@@ -8,7 +8,7 @@ use schema::{CompositeType, CompositeTypeId, Definition, ObjectDefinitionId};
 use walker::Walk;
 
 use crate::{
-    operation::{
+    prepare::cached::{
         CachedOperationContext, FieldShapeRefId, PartitionDataField, PartitionDataFieldId, PartitionTypenameField,
         ResponseObjectSetDefinitionId, SelectionSet,
     },

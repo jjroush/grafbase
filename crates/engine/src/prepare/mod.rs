@@ -1,6 +1,6 @@
 mod cached;
 mod context;
-mod error;
+mod operation_plan;
 mod trusted_documents;
 mod with_cache;
 mod without_cache;
@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 pub(crate) use cached::*;
 pub(crate) use context::*;
+pub(crate) use operation_plan::*;
 
 use ::operation::{ComplexityCost, Request, Variables};
 use futures::FutureExt;
@@ -18,7 +19,6 @@ use tracing::{info_span, Instrument};
 use trusted_documents::OperationDocument;
 
 use crate::{
-    operation::OperationPlan,
     response::{GraphqlError, Response},
     ErrorCode, Runtime,
 };

@@ -3,7 +3,7 @@
 //! ===================
 //! Generated with: `cargo run -p engine-codegen`
 //! Source file: <engine-codegen dir>/domain/query_plan.graphql
-use crate::prepare::cached::query_plan::model::{
+use crate::prepare::cached::query_plan::{
     prelude::*, PartitionDataField, PartitionDataFieldId, PartitionTypenameField, PartitionTypenameFieldId,
 };
 use walker::{Iter, Walk};
@@ -26,8 +26,8 @@ pub(crate) struct SelectionSetRecord {
 
 #[derive(Clone, Copy)]
 pub(crate) struct SelectionSet<'a> {
-    pub(in crate::prepare::cached::query_plan::model) ctx: CachedOperationContext<'a>,
-    pub(in crate::prepare::cached::query_plan::model) item: SelectionSetRecord,
+    pub(in crate::prepare::cached::query_plan) ctx: CachedOperationContext<'a>,
+    pub(in crate::prepare::cached::query_plan) item: SelectionSetRecord,
 }
 
 impl std::ops::Deref for SelectionSet<'_> {

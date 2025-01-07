@@ -16,7 +16,7 @@ use crate::prepare::CachedOperationContext;
 
 #[derive(Clone, Copy)]
 pub(crate) struct PartitionFieldArguments<'a> {
-    pub(in crate::prepare::cached::query_plan::model) ctx: CachedOperationContext<'a>,
+    pub(in crate::prepare::cached::query_plan) ctx: CachedOperationContext<'a>,
     ids: QueryOrSchemaFieldArgumentIds,
 }
 
@@ -141,7 +141,7 @@ impl<'a> Iterator for PartitionFieldArgumentsIterator<'a> {
 
 #[derive(Clone, Copy)]
 pub(crate) struct PartitionFieldArgument<'a> {
-    pub(in crate::prepare::cached::query_plan::model) ctx: CachedOperationContext<'a>,
+    pub(in crate::prepare::cached::query_plan) ctx: CachedOperationContext<'a>,
     pub(crate) definition_id: InputValueDefinitionId,
     pub(crate) value_id: QueryOrSchemaInputValueId,
 }
@@ -205,8 +205,8 @@ impl<'a> PartitionFieldArgument<'a> {
 }
 
 struct PartitionFieldArgumentsView<'a> {
-    pub(in crate::prepare::cached::query_plan::model) ctx: CachedOperationContext<'a>,
-    pub(in crate::prepare::cached::query_plan::model) variables: &'a Variables,
+    pub(in crate::prepare::cached::query_plan) ctx: CachedOperationContext<'a>,
+    pub(in crate::prepare::cached::query_plan) variables: &'a Variables,
     ids: QueryOrSchemaFieldArgumentIds,
     selection_set: &'a InputValueSet,
 }

@@ -15,8 +15,7 @@ use schema::{EntityDefinitionId, FieldSetRecord, Schema};
 use walker::{Iter, Walk};
 
 use crate::{
-    operation::{CachedOperationContext, QueryPlan, ResponseModifierRule},
-    prepare::CachedOperation,
+    prepare::{CachedOperation, CachedOperationContext},
     resolver::Resolver,
     response::Shapes,
 };

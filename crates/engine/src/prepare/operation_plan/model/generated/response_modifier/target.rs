@@ -3,8 +3,8 @@
 //! ===================
 //! Generated with: `cargo run -p engine-codegen`
 //! Source file: <engine-codegen dir>/domain/operation_plan.graphql
-use crate::operation::plan::model::prelude::*;
-use crate::operation::solve::{DataField, DataFieldId};
+use crate::prepare::cached::{DataField, DataFieldId};
+use crate::prepare::operation_plan::model::prelude::*;
 use schema::{CompositeType, CompositeTypeId};
 use walker::Walk;
 
@@ -26,8 +26,8 @@ pub(crate) struct ResponseModifierTargetRecord {
 
 #[derive(Clone, Copy)]
 pub(crate) struct ResponseModifierTarget<'a> {
-    pub(in crate::operation::plan::model) ctx: OperationPlanContext<'a>,
-    pub(in crate::operation::plan::model) ref_: &'a ResponseModifierTargetRecord,
+    pub(in crate::prepare::operation_plan::model) ctx: OperationPlanContext<'a>,
+    pub(in crate::prepare::operation_plan::model) ref_: &'a ResponseModifierTargetRecord,
 }
 
 impl std::ops::Deref for ResponseModifierTarget<'_> {

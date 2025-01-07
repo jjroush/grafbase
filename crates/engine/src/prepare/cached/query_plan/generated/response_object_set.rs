@@ -3,7 +3,7 @@
 //! ===================
 //! Generated with: `cargo run -p engine-codegen`
 //! Source file: <engine-codegen dir>/domain/query_plan.graphql
-use crate::prepare::cached::query_plan::model::prelude::*;
+use crate::prepare::cached::query_plan::prelude::*;
 use schema::{CompositeType, CompositeTypeId};
 use walker::Walk;
 
@@ -24,7 +24,7 @@ pub(crate) struct ResponseObjectSetDefinitionId(std::num::NonZero<u16>);
 
 #[derive(Clone, Copy)]
 pub(crate) struct ResponseObjectSetDefinition<'a> {
-    pub(in crate::prepare::cached::query_plan::model) ctx: CachedOperationContext<'a>,
+    pub(in crate::prepare::cached::query_plan) ctx: CachedOperationContext<'a>,
     pub(crate) id: ResponseObjectSetDefinitionId,
 }
 
