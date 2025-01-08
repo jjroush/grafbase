@@ -32,7 +32,7 @@ pub(crate) fn post_process(schema: &Schema, operation: &mut Operation, mut query
         root_node_ix: query.root_node_ix,
         fields: query.fields,
         shared_type_conditions: query.shared_type_conditions,
-        shared_directives: query.shared_directives,
+        deduplicated_flat_sorted_executable_directives: query.deduplicated_flat_sorted_executable_directives,
     };
 
     tracing::debug!(

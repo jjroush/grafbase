@@ -329,6 +329,8 @@ impl<'schema, 'p> OperationBinder<'schema, 'p> {
                 };
             }
         }
+        out.sort_unstable();
+        out.dedup();
         Ok(out)
     }
 

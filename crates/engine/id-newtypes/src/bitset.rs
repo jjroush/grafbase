@@ -1,4 +1,4 @@
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(Clone, serde::Serialize, serde::Deserialize, Debug)]
 pub struct BitSet<Id> {
     inner: fixedbitset::FixedBitSet,
     _phantom: std::marker::PhantomData<Id>,

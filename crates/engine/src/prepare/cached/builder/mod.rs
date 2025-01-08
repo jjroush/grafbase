@@ -1,14 +1,17 @@
 mod requires;
 mod shapes;
 
-use id_newtypes::IdRange;
+use id_newtypes::{BitSet, IdRange};
 use im::HashMap;
 use operation::Operation;
 use query_solver::{
     petgraph::{graph::NodeIndex, visit::EdgeRef},
     Edge, Node, QueryField, SolvedQuery,
 };
-use schema::{CompositeType, CompositeTypeId, Definition, EntityDefinitionId, ResolverDefinitionId, Schema};
+use schema::{
+    CompositeType, CompositeTypeId, Definition, EntityDefinitionId, ResolverDefinitionId, Schema, TypeSystemDirective,
+    TypeSystemDirectiveId,
+};
 use walker::Walk;
 
 use super::*;
@@ -24,10 +27,8 @@ pub(super) struct Solver<'a> {
     nested_fields_buffer_pool: BufferPool<NestedField>,
     query_partitions_to_create_stack: Vec<QueryPartitionToCreate>,
     query_field_node_to_response_object_set: HashMap<NodeIndex, ResponseObjectSetDefinitionId>,
-    // one to one, sorted after the plan generation.
-    node_to_field: Vec<(NodeIndex, PartitionDataFieldId)>,
-    // Populated during plan generation, drained while populating requirements.
-    field_to_node: Vec<(PartitionDataFieldId, NodeIndex)>,
+    // one to one
+    node_to_field: Vec<Option<PartitionFieldId>>,
     // Populated during plan generation
     query_partition_to_node: Vec<(QueryPartitionId, NodeIndex)>,
 }
@@ -46,6 +47,7 @@ enum NestedField {
     },
     Typename {
         record: PartitionTypenameFieldRecord,
+        node_ix: NodeIndex,
     },
 }
 
@@ -58,18 +60,20 @@ impl<'a> Solver<'a> {
                 query_plan: QueryPlan {
                     partitions: Vec::new(),
                     mutation_partition_order: Vec::new(),
-                    query_modifier_definitions: Vec::new(),
+                    query_modifiers: Vec::new(),
                     shapes: Shapes::default(),
                     shared_type_conditions: std::mem::take(&mut solution.shared_type_conditions),
                     field_shape_refs: Vec::new(),
-                    data_fields: Vec::new(),
+                    data_fields: Vec::with_capacity(solution.fields.len()),
                     typename_fields: Vec::new(),
                     response_object_set_definitions: Vec::new(),
+                    response_data_fields: Default::default(),
+                    response_typename_fields: Default::default(),
+                    response_modifier_definitions: Vec::new(),
                 },
                 operation,
             },
-            node_to_field: Vec::with_capacity(solution.graph.node_count()),
-            field_to_node: Vec::with_capacity(solution.graph.node_count()),
+            node_to_field: vec![None; solution.graph.node_count()],
             solution,
             nested_fields_buffer_pool: BufferPool::default(),
             query_partitions_to_create_stack: Vec::new(),
@@ -110,13 +114,25 @@ impl<'a> Solver<'a> {
             self.generate_query_partition(partition_to_create);
         }
 
-        self.node_to_field.sort_unstable();
+        let mut response_data_fields = BitSet::with_capacity(self.output.query_plan.data_fields.len());
+        for (i, field) in self.output.query_plan.data_fields.iter().enumerate() {
+            if field.query_position.is_some() {
+                response_data_fields.set(i.into(), true);
+            }
+        }
+        self.output.query_plan.response_data_fields = response_data_fields;
+        let mut response_typename_fields = BitSet::with_capacity(self.output.query_plan.typename_fields.len());
+        for (i, field) in self.output.query_plan.typename_fields.iter().enumerate() {
+            if field.query_position.is_some() {
+                response_typename_fields.set(i.into(), true);
+            }
+        }
 
         self.generate_mutation_partition_order_after_partition_generation()?;
 
         self.populate_requirements_after_partition_generation()?;
 
-        // self.populate_modifiers_after_partition_generation()?;
+        self.populate_modifiers_after_partition_generation()?;
 
         self.populate_shapes_after_partition_generation();
 
@@ -241,7 +257,10 @@ impl<'a> Solver<'a> {
                             });
                         }
                         MaybePartitionFieldRecord::Typename(record) => {
-                            fields_buffer.push(NestedField::Typename { record });
+                            fields_buffer.push(NestedField::Typename {
+                                record,
+                                node_ix: target_ix,
+                            });
                         }
                     }
                 }
@@ -264,12 +283,14 @@ impl<'a> Solver<'a> {
             match field {
                 NestedField::Data { mut record, node_ix } => {
                     record.parent_field_output_id = response_object_set_id;
-                    let data_field_id = PartitionDataFieldId::from(self.output.query_plan.data_fields.len());
-                    self.node_to_field.push((node_ix, data_field_id));
+                    self.node_to_field[node_ix.index()] =
+                        Some(PartitionFieldId::Data(self.output.query_plan.data_fields.len().into()));
                     self.output.query_plan.data_fields.push(record);
-                    self.field_to_node.push((data_field_id, node_ix));
                 }
-                NestedField::Typename { record } => {
+                NestedField::Typename { record, node_ix } => {
+                    self.node_to_field[node_ix.index()] = Some(PartitionFieldId::Typename(
+                        self.output.query_plan.typename_fields.len().into(),
+                    ));
                     self.output.query_plan.typename_fields.push(record);
                 }
             }
@@ -309,49 +330,164 @@ impl<'a> Solver<'a> {
             })
     }
 
-    // fn populate_modifiers_after_partition_generation(&mut self) -> SolveResult<()> {
-    //     let bound_field_to_field = IdToMany::from(std::mem::take(&mut self.bound_field_to_field));
-    //
-    //     for (i, modifier) in std::mem::take(&mut self.operation.query_modifiers)
-    //         .into_iter()
-    //         .enumerate()
-    //     {
-    //         let id = BoundQueryModifierId::from(i);
-    //         let start = self.output.query_plan.field_refs.len();
-    //         for bound_field_id in &self.operation[modifier.impacted_fields] {
-    //             self.output.query_plan
-    //                 .field_refs
-    //                 .extend(bound_field_to_field.find_all(*bound_field_id));
-    //         }
-    //         self.output.query_plan
-    //             .query_modifier_definitions
-    //             .push(QueryModifierDefinitionRecord {
-    //                 rule: modifier.rule,
-    //                 impacts_root_object: self.operation.root_query_modifier_ids.contains(&id),
-    //                 impacted_field_ids: IdRange::from(start..self.output.query_plan.field_refs.len()),
-    //             });
-    //     }
-    //
-    //     for modifier in std::mem::take(&mut self.operation.response_modifiers) {
-    //         let start = self.output.query_plan.data_field_refs.len();
-    //         for bound_field_id in &self.operation[modifier.impacted_fields] {
-    //             self.output.query_plan
-    //                 .data_field_refs
-    //                 .extend(bound_field_to_field.find_all(*bound_field_id).map(|field| match field {
-    //                     FieldId::Data(id) => *id,
-    //                     FieldId::Typename(_) => unreachable!(),
-    //                 }));
-    //         }
-    //         self.output.query_plan
-    //             .response_modifier_rule_to_impacted_fields
-    //             .push(ResponseModifierRuleToImpactedFields {
-    //                 rule: modifier.rule,
-    //                 impacted_field_ids: IdRange::from(start..self.output.query_plan.data_field_refs.len()),
-    //             });
-    //     }
-    //
-    //     Ok(())
-    // }
+    fn populate_modifiers_after_partition_generation(&mut self) -> SolveResult<()> {
+        let mut response_modifier_definitions = Vec::new();
+        let mut query_modifiers = vec![
+            QueryModifierRecord {
+                rule: QueryModifierRule::Authenticated,
+                impacts_root_object: false,
+                impacted_field_ids: Vec::new(),
+            };
+            self.solution.deduplicated_flat_sorted_executable_directives.len()
+        ];
+        for (directives, id) in
+            std::mem::take(&mut self.solution.deduplicated_flat_sorted_executable_directives).into_iter()
+        {
+            query_modifiers[usize::from(id)].rule = QueryModifierRule::Executable { directives };
+        }
+
+        let mut deduplicated_query_modifier_rules = HashMap::new();
+        let mut deduplicated_response_modifier_rules = HashMap::new();
+        enum Rule {
+            Query(QueryModifierRule),
+            Resp(ResponseModifierRule),
+        }
+        for (node_ix, field_id) in self.node_to_field.iter().enumerate() {
+            let Some(field_id) = field_id else {
+                continue;
+            };
+            if let PartitionFieldId::Data(field_id) = *field_id {
+                let field = &self.output.query_plan[field_id];
+                let definition = field.definition_id.walk(self.schema);
+                for directive in definition.directives() {
+                    let rule = match directive {
+                        TypeSystemDirective::Authenticated => Rule::Query(QueryModifierRule::Authenticated),
+                        TypeSystemDirective::Authorized(dir) => {
+                            if dir.node_id.is_some() {
+                                Rule::Resp(ResponseModifierRule::AuthorizedEdgeChild {
+                                    directive_id: dir.id,
+                                    definition_id: definition.id,
+                                })
+                            } else if dir.fields_id.is_some() {
+                                Rule::Resp(ResponseModifierRule::AuthorizedParentEdge {
+                                    directive_id: dir.id,
+                                    definition_id: definition.id,
+                                })
+                            } else if dir.arguments.is_empty() {
+                                Rule::Query(QueryModifierRule::AuthorizedFieldWithArguments {
+                                    directive_id: dir.id,
+                                    definition_id: definition.id,
+                                    argument_ids: field.argument_ids,
+                                })
+                            } else {
+                                Rule::Query(QueryModifierRule::AuthorizedField {
+                                    directive_id: dir.id,
+                                    definition_id: definition.id,
+                                })
+                            }
+                        }
+                        TypeSystemDirective::RequiresScopes(dir) => {
+                            Rule::Query(QueryModifierRule::RequiresScopes(dir.id))
+                        }
+                        TypeSystemDirective::Cost(_)
+                        | TypeSystemDirective::Deprecated(_)
+                        | TypeSystemDirective::ListSize(_) => continue,
+                    };
+                    match rule {
+                        Rule::Query(rule) => {
+                            let ix = deduplicated_query_modifier_rules
+                                .entry(rule.clone())
+                                .or_insert_with(|| {
+                                    query_modifiers.push(QueryModifierRecord {
+                                        rule,
+                                        impacts_root_object: false,
+                                        impacted_field_ids: Vec::new(),
+                                    });
+                                    query_modifiers.len() - 1
+                                });
+                            query_modifiers[*ix].impacted_field_ids.push(field_id.into());
+                        }
+                        Rule::Resp(rule) => {
+                            let ix = deduplicated_response_modifier_rules
+                                .entry(rule.clone())
+                                .or_insert_with(|| {
+                                    response_modifier_definitions.push(ResponseModifierDefinitionRecord {
+                                        rule,
+                                        impacted_field_ids: Vec::new(),
+                                    });
+                                    response_modifier_definitions.len() - 1
+                                });
+                            response_modifier_definitions[*ix].impacted_field_ids.push(field_id);
+                        }
+                    }
+                }
+
+                let output_definition = definition.ty().definition();
+                for directive in output_definition.directives() {
+                    let rule = match directive {
+                        TypeSystemDirective::Authenticated => Rule::Query(QueryModifierRule::Authenticated),
+                        TypeSystemDirective::Authorized(dir) => {
+                            if dir.fields_id.is_some() {
+                                Rule::Resp(ResponseModifierRule::AuthorizedParentEdge {
+                                    directive_id: dir.id,
+                                    definition_id: definition.id,
+                                })
+                            } else {
+                                Rule::Query(QueryModifierRule::AuthorizedField {
+                                    directive_id: dir.id,
+                                    definition_id: definition.id,
+                                })
+                            }
+                        }
+                        TypeSystemDirective::RequiresScopes(dir) => {
+                            Rule::Query(QueryModifierRule::RequiresScopes(dir.id))
+                        }
+                        TypeSystemDirective::Cost(_)
+                        | TypeSystemDirective::Deprecated(_)
+                        | TypeSystemDirective::ListSize(_) => continue,
+                    };
+                    match rule {
+                        Rule::Query(rule) => {
+                            let ix = deduplicated_query_modifier_rules
+                                .entry(rule.clone())
+                                .or_insert_with(|| {
+                                    query_modifiers.push(QueryModifierRecord {
+                                        rule,
+                                        impacts_root_object: false,
+                                        impacted_field_ids: Vec::new(),
+                                    });
+                                    query_modifiers.len() - 1
+                                });
+                            query_modifiers[*ix].impacted_field_ids.push(field_id.into());
+                        }
+                        Rule::Resp(rule) => {
+                            let ix = deduplicated_response_modifier_rules
+                                .entry(rule.clone())
+                                .or_insert_with(|| {
+                                    response_modifier_definitions.push(ResponseModifierDefinitionRecord {
+                                        rule,
+                                        impacted_field_ids: Vec::new(),
+                                    });
+                                    response_modifier_definitions.len() - 1
+                                });
+                            response_modifier_definitions[*ix].impacted_field_ids.push(field_id);
+                        }
+                    }
+                }
+            }
+            let Node::Field { id, .. } = self.solution.graph[NodeIndex::new(node_ix)] else {
+                continue;
+            };
+            if let Some(id) = self.solution[id].flat_directive_id {
+                query_modifiers[usize::from(id)].impacted_field_ids.push(*field_id);
+            }
+        }
+
+        self.output.query_plan.query_modifiers = query_modifiers;
+        self.output.query_plan.response_modifier_definitions = response_modifier_definitions;
+
+        Ok(())
+    }
 
     fn generate_mutation_partition_order_after_partition_generation(&mut self) -> SolveResult<()> {
         if !self.output.operation.attributes.ty.is_mutation() {

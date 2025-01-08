@@ -4,17 +4,17 @@ use query_solver::{
     Edge,
 };
 
-use super::{PartitionDataFieldId, RequiredFieldSetItemRecord, RequiredFieldSetRecord, SolveResult};
+use crate::prepare::PartitionFieldId;
+
+use super::{
+    PartitionDataField, PartitionDataFieldId, RequiredFieldSetItemRecord, RequiredFieldSetRecord, SolveResult,
+};
 
 use super::Solver;
 
 impl Solver<'_> {
     pub(super) fn populate_requirements_after_partition_generation(&mut self) -> SolveResult<()> {
-        debug_assert!(
-            !self.query_partition_to_node.is_empty()
-                && self.node_to_field.is_sorted()
-                && !self.field_to_node.is_empty()
-        );
+        debug_assert!(!self.query_partition_to_node.is_empty() && self.node_to_field.is_sorted());
 
         let query_partition_to_node = std::mem::take(&mut self.query_partition_to_node);
         for (query_partition_id, query_partition_root_node_ix) in query_partition_to_node.iter().copied() {
@@ -23,11 +23,14 @@ impl Solver<'_> {
         }
         self.query_partition_to_node = query_partition_to_node;
 
-        for (field_id, node_ix) in std::mem::take(&mut self.field_to_node) {
+        for (node_ix, field_id) in self.node_to_field.iter().enumerate() {
+            let Some(PartitionFieldId::Data(field_id)) = *field_id else {
+                continue;
+            };
             self.output.query_plan[field_id].required_fields_record =
-                self.create_required_field_set(node_ix, Edge::RequiredBySubgraph);
+                self.create_required_field_set(NodeIndex::new(node_ix), Edge::RequiredBySubgraph);
             self.output.query_plan[field_id].required_fields_record_by_supergraph =
-                self.create_required_field_set(node_ix, Edge::RequiredBySupergraph);
+                self.create_required_field_set(NodeIndex::new(node_ix), Edge::RequiredBySupergraph);
         }
 
         Ok(())
@@ -85,9 +88,8 @@ impl Solver<'_> {
     }
 
     fn get_field_id_for(&self, node_ix: NodeIndex) -> Option<PartitionDataFieldId> {
-        self.node_to_field
-            .binary_search_by(|probe| probe.0.cmp(&node_ix))
-            .map(|i| self.node_to_field[i].1)
-            .ok()
+        self.node_to_field[node_ix.index()]
+            .as_ref()
+            .and_then(PartitionFieldId::as_data)
     }
 }

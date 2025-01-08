@@ -48,8 +48,16 @@ impl<'a> From<CachedOperationContext<'a>> for OperationContext<'a> {
 }
 
 impl<'a> CachedOperationContext<'a> {
-    pub(in crate::prepare::cached) fn query_partitions(&self) -> impl Iter<Item = QueryPartition<'a>> + 'a {
+    pub(in crate::prepare) fn query_partitions(&self) -> impl Iter<Item = QueryPartition<'a>> + 'a {
         IdRange::<QueryPartitionId>::from(0..self.cached.query_plan.partitions.len()).walk(*self)
+    }
+
+    pub(in crate::prepare) fn data_fields(&self) -> impl Iter<Item = PartitionDataField<'a>> + 'a {
+        IdRange::<PartitionDataFieldId>::from(0..self.cached.query_plan.data_fields.len()).walk(*self)
+    }
+
+    pub(in crate::prepare) fn query_modifiers(&self) -> impl Iter<Item = QueryModifier<'a>> + 'a {
+        self.cached.query_plan.query_modifiers.walk(*self)
     }
 
     // pub(in crate::operation) fn response_modifier_rules(

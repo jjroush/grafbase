@@ -3,7 +3,6 @@
 mod engine;
 mod execution;
 mod graphql_over_http;
-mod operation;
 mod prepare;
 mod resolver;
 mod response;

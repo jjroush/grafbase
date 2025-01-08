@@ -1,14 +1,15 @@
 use std::num::NonZero;
 
 use id_newtypes::{BitSet, IdToMany};
-use operation::InputValueContext;
-use schema::{RequiresScopeSetIndex, RequiresScopesDirectiveId};
+use operation::{InputValueContext, Variables};
 use serde::Deserialize;
 use walker::Walk;
 
 use crate::{
-    operation::{CachedOperationContext, PartitionDataFieldId, PartitionTypenameFieldId},
-    prepare::{CachedOperation, PrepareContext},
+    prepare::{
+        CachedOperation, CachedOperationContext, PartitionDataFieldId, PartitionField, PartitionTypenameFieldId,
+        PrepareContext, QueryModifier, QueryModifierRule, RequiredFieldSetItemRecord,
+    },
     response::{ConcreteShapeId, ErrorCode, FieldShapeId, GraphqlError},
     Runtime,
 };
@@ -19,16 +20,15 @@ use super::PlanResult;
 #[derive(Default, id_derives::IndexedFields)]
 pub(crate) struct QueryModifications {
     pub is_any_field_skipped: bool,
-    pub skipped_data_fields: BitSet<PartitionDataFieldId>,
-    pub skipped_typename_fields: BitSet<PartitionTypenameFieldId>,
+    pub response_data_fields: BitSet<PartitionDataFieldId>,
+    pub response_typename_fields: BitSet<PartitionTypenameFieldId>,
+    pub subgraph_request_data_fields: BitSet<PartitionDataFieldId>,
     #[indexed_by(ErrorId)]
     pub errors: Vec<GraphqlError>,
     pub concrete_shape_has_error: BitSet<ConcreteShapeId>,
     pub field_shape_id_to_error_ids: IdToMany<FieldShapeId, ErrorId>,
     pub skipped_field_shapes: BitSet<FieldShapeId>,
     pub root_error_ids: Vec<ErrorId>,
-    // sorted by scope id
-    matched_scopes: Vec<(RequiresScopesDirectiveId, RequiresScopeSetIndex)>,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, serde::Serialize, serde::Deserialize, id_derives::Id)]
@@ -37,46 +37,36 @@ pub struct ErrorId(NonZero<u16>);
 impl QueryModifications {
     pub(crate) async fn build(
         ctx: &PrepareContext<'_, impl Runtime>,
-        operation: &CachedOperation,
+        cached: &CachedOperation,
         variables: &Variables,
     ) -> PlanResult<Self> {
-        let operation = &operation.query_plan;
+        let query_plan = &cached.query_plan;
         Builder {
             ctx,
             operation_ctx: CachedOperationContext {
                 schema: ctx.schema(),
-                query_plan: operation,
+                cached,
             },
             input_value_ctx: InputValueContext {
                 schema: ctx.schema(),
-                query_input_values: &operation.query_input_values,
+                query_input_values: &cached.operation.query_input_values,
                 variables,
             },
             field_shape_id_to_error_ids: Default::default(),
             modifications: QueryModifications {
                 is_any_field_skipped: false,
-                skipped_data_fields: BitSet::with_capacity(operation.data_fields.len()),
-                skipped_typename_fields: BitSet::with_capacity(operation.typename_fields.len()),
-                concrete_shape_has_error: BitSet::with_capacity(operation.shapes.concrete.len()),
+                response_data_fields: query_plan.response_data_fields.clone(),
+                response_typename_fields: query_plan.response_typename_fields.clone(),
+                subgraph_request_data_fields: Default::default(),
+                concrete_shape_has_error: BitSet::with_capacity(query_plan.shapes.concrete.len()),
                 errors: Vec::new(),
                 field_shape_id_to_error_ids: Default::default(),
                 root_error_ids: Vec::new(),
-                matched_scopes: vec![],
-                skipped_field_shapes: BitSet::with_capacity(operation.shapes.fields.len()),
+                skipped_field_shapes: BitSet::with_capacity(query_plan.shapes.fields.len()),
             },
         }
         .build()
         .await
-    }
-
-    #[allow(unused)]
-    pub(super) fn matched_scope_set(&self, required_scope: RequiresScopesDirectiveId) -> Option<RequiresScopeSetIndex> {
-        let index = self
-            .matched_scopes
-            .binary_search_by_key(&required_scope, |(id, _)| *id)
-            .ok()?;
-
-        Some(self.matched_scopes[index].1)
     }
 }
 
@@ -95,19 +85,17 @@ where
     pub(super) async fn build(mut self) -> PlanResult<QueryModifications> {
         let mut scope_jwt_claim = None;
 
-        for modifier in self
-            .operation_ctx
-            .query_plan
-            .query_modifier_definitions
-            .walk(self.operation_ctx)
-        {
+        for modifier in self.operation_ctx.query_modifiers() {
             match &modifier.rule {
                 QueryModifierRule::Authenticated => {
                     if self.ctx.access_token().is_anonymous() {
-                        self.handle_modifier_resulted_in_error(
+                        self.handle_authorization_modifier(
                             modifier,
-                            GraphqlError::new("Unauthenticated", ErrorCode::Unauthenticated),
-                        )
+                            AuthorizationModifierResult::Denied(Some(GraphqlError::new(
+                                "Unauthenticated",
+                                ErrorCode::Unauthenticated,
+                            ))),
+                        );
                     }
                 }
                 QueryModifierRule::RequiresScopes(id) => {
@@ -121,14 +109,15 @@ where
                     });
 
                     let Some(selected_scope_set) = id.walk(self.ctx.schema()).matches(scope_jwt_claim) else {
-                        self.handle_modifier_resulted_in_error(
+                        self.handle_authorization_modifier(
                             modifier,
-                            GraphqlError::new("Insufficient scopes", ErrorCode::Unauthorized),
+                            AuthorizationModifierResult::Denied(Some(GraphqlError::new(
+                                "Insufficient scopes",
+                                ErrorCode::Unauthorized,
+                            ))),
                         );
                         continue;
                     };
-
-                    self.record_selected_scope_set(*id, selected_scope_set);
                 }
                 QueryModifierRule::AuthorizedField {
                     directive_id,
@@ -141,18 +130,14 @@ where
                         .hooks()
                         .authorize_edge_pre_execution(
                             definition_id.walk(self.ctx.schema()),
-                            self.operation_ctx
-                                .hydrate_arguments(
-                                    // FIXME: just pass the argument_ids after migrating to QP.
-                                    (argument_ids.start..argument_ids.end).into(),
-                                    self.input_value_ctx.variables,
-                                )
-                                .with_selection_set(&directive.arguments),
+                            argument_ids
+                                .walk(self.operation_ctx)
+                                .view(&directive.arguments, self.input_value_ctx.variables),
                             directive.metadata(),
                         )
                         .await;
                     if let Err(error) = verdict {
-                        self.handle_modifier_resulted_in_error(modifier, error);
+                        self.handle_authorization_modifier(modifier, AuthorizationModifierResult::Denied(Some(error)));
                     }
                 }
                 QueryModifierRule::AuthorizedDefinition {
@@ -167,25 +152,25 @@ where
                         .await;
 
                     if let Err(error) = result {
-                        self.handle_modifier_resulted_in_error(modifier, error);
+                        self.handle_authorization_modifier(modifier, AuthorizationModifierResult::Denied(Some(error)));
                     }
                 }
-                QueryModifierRule::SkipInclude { directives } => {
+                QueryModifierRule::Executable { directives } => {
                     // GraphQL spec:
                     //   Stated conversely, the field or fragment must not be queried if either the @skip condition is true or the @include condition is false.
                     let is_skipped = directives.iter().any(|directive| match directive {
-                        SkipIncludeDirective::SkipIf(input_value_id) => {
-                            bool::deserialize(input_value_id.walk(self.input_value_ctx))
+                        operation::ExecutableDirectiveId::Include(directive) => {
+                            !bool::deserialize(directive.condition.walk(self.input_value_ctx))
                                 .expect("at this point we've already checked the argument type")
                         }
-                        SkipIncludeDirective::IncludeIf(input_value_id) => {
-                            !bool::deserialize(input_value_id.walk(self.input_value_ctx))
+                        operation::ExecutableDirectiveId::Skip(directive) => {
+                            bool::deserialize(directive.condition.walk(self.input_value_ctx))
                                 .expect("at this point we've already checked the argument type")
                         }
                     });
 
                     if is_skipped {
-                        self.handle_modifier_resulted_in_skipped_fields(modifier)
+                        self.handle_skipped_field(modifier)
                     }
                 }
             }
@@ -196,9 +181,21 @@ where
 
     fn finalize(mut self) -> QueryModifications {
         self.modifications.field_shape_id_to_error_ids = self.field_shape_id_to_error_ids.into();
+
+        self.modifications.subgraph_request_data_fields = self.modifications.response_data_fields.clone();
+        for field in self.operation_ctx.data_fields() {
+            if self.modifications.response_data_fields[field.id] {
+                self.recursively_include_in_subgraph_request(&field.required_fields_record);
+                self.recursively_include_in_subgraph_request(&field.required_fields_record_by_supergraph);
+            }
+        }
+
+        // Identify all concrete shapes with errors.
         let mut field_shape_ids_with_errors = self.modifications.field_shape_id_to_error_ids.ids();
         if let Some(mut current) = field_shape_ids_with_errors.next() {
-            'outer: for (concrete_shape_id, shape) in self.operation_ctx.query_plan.shapes.concrete.iter().enumerate() {
+            'outer: for (concrete_shape_id, shape) in
+                self.operation_ctx.cached.query_plan.shapes.concrete.iter().enumerate()
+            {
                 if current < shape.field_shape_ids.end {
                     let mut i = 0;
                     while let Some(field_shape_id) = shape.field_shape_ids.get(i) {
@@ -223,45 +220,60 @@ where
                 }
             }
         }
-        drop(field_shape_ids_with_errors);
-
-        self.modifications
-            .matched_scopes
-            .sort_unstable_by_key(|(scope_id, _)| *scope_id);
 
         self.modifications
     }
 
-    fn handle_modifier_resulted_in_error(&mut self, modifier: QueryModifierDefinition<'op>, error: GraphqlError) {
-        let error_id = self.push_error(error);
-        if modifier.impacts_root_object {
-            self.modifications.root_error_ids.push(error_id);
+    fn recursively_include_in_subgraph_request(&mut self, dependencies: &[RequiredFieldSetItemRecord]) {
+        for item in dependencies {
+            self.modifications
+                .subgraph_request_data_fields
+                .set(item.data_field_id, true);
+            self.recursively_include_in_subgraph_request(&item.subselection_record);
         }
-        self.modifications.is_any_field_skipped = true;
-        for field in modifier.impacted_fields() {
-            match field {
-                Field::Typename(field) => {
-                    self.modifications.skipped_typename_fields.set(field.id, true);
+    }
+
+    fn handle_authorization_modifier(&mut self, modifier: QueryModifier<'op>, result: AuthorizationModifierResult) {
+        match result {
+            AuthorizationModifierResult::Granted => {}
+            AuthorizationModifierResult::Denied(None) => {
+                todo!()
+            }
+            AuthorizationModifierResult::Denied(Some(error)) => {
+                let error_id = self.push_error(error);
+                if modifier.impacts_root_object {
+                    self.modifications.root_error_ids.push(error_id);
                 }
-                Field::Data(field) => {
-                    self.modifications.skipped_data_fields.set(field.id, true);
-                    for field_shape_id in field.shapes() {
-                        self.field_shape_id_to_error_ids.push((field_shape_id, error_id));
+                self.modifications.is_any_field_skipped = true;
+                for field in modifier.impacted_fields() {
+                    match field {
+                        PartitionField::Typename(field) => {
+                            self.modifications.response_typename_fields.set(field.id, false);
+                        }
+                        PartitionField::Data(field) => {
+                            self.modifications.response_data_fields.set(field.id, false);
+                            for field_shape_id in field.shapes() {
+                                self.field_shape_id_to_error_ids.push((field_shape_id, error_id));
+                            }
+                        }
                     }
                 }
+            }
+            AuthorizationModifierResult::DeniedHiddenIfPossible => {
+                todo!()
             }
         }
     }
 
-    fn handle_modifier_resulted_in_skipped_fields(&mut self, modifier: QueryModifierDefinition<'op>) {
+    fn handle_skipped_field(&mut self, modifier: QueryModifier<'op>) {
         self.modifications.is_any_field_skipped = true;
         for field in modifier.impacted_fields() {
             match field {
-                Field::Typename(field) => {
-                    self.modifications.skipped_typename_fields.set(field.id, true);
+                PartitionField::Typename(field) => {
+                    self.modifications.response_typename_fields.set(field.id, false);
                 }
-                Field::Data(field) => {
-                    self.modifications.skipped_data_fields.set(field.id, true);
+                PartitionField::Data(field) => {
+                    self.modifications.response_data_fields.set(field.id, false);
                     for field_shape_id in field.shapes() {
                         self.modifications.skipped_field_shapes.set(field_shape_id, true);
                     }
@@ -275,8 +287,10 @@ where
         self.modifications.errors.push(error);
         id
     }
+}
 
-    fn record_selected_scope_set(&mut self, id: RequiresScopesDirectiveId, selected_scope_set: RequiresScopeSetIndex) {
-        self.modifications.matched_scopes.push((id, selected_scope_set));
-    }
+enum AuthorizationModifierResult {
+    Granted,
+    Denied(Option<GraphqlError>),
+    DeniedHiddenIfPossible,
 }

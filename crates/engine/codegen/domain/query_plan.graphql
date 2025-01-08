@@ -10,13 +10,13 @@ scalar QueryPlan
   )
 
 scalar String @prelude
-scalar FieldShapeRefId @id
 
 # ------------------
 # - QueryPartition -
 # ------------------
 
 scalar ConcreteShapeId @prelude @id
+scalar RequiredFieldSet @record
 
 type QueryPartition @indexed(id_size: "u16") @meta(module: "query_partition") {
   entity_definition: EntityDefinition!
@@ -35,8 +35,6 @@ type ResponseObjectSetDefinition @meta(module: "response_object_set") @indexed(i
 # - SelectionSet -
 # ----------------
 
-scalar RequiredFieldSet @record
-
 type SelectionSet @meta(module: "selection_set", derive: ["Default"]) @copy {
   data_fields_ordered_by_parent_entity_id_then_key: [PartitionDataField!]!
     @field(record_field_name: "data_field_ids_ordered_by_parent_entity_id_then_key")
@@ -47,7 +45,7 @@ type SelectionSet @meta(module: "selection_set", derive: ["Default"]) @copy {
 scalar PartitionDataField @record @indexed
 scalar PartitionTypenameField @record @indexed
 
-union PartitionField @id @meta(module: "field") @variants(remove_suffix: "Field") =
+union PartitionField @id @meta(module: "field") @variants(names: ["Data", "Typename"]) =
   | PartitionDataField
   | PartitionTypenameField
 
@@ -77,8 +75,15 @@ union PartitionField @id @meta(module: "field") @variants(remove_suffix: "Field"
 
 scalar QueryModifierRule
 
-type QueryModifierDefinition @meta(module: "modifier") {
+type QueryModifier @meta(module: "modifier", derive: ["Clone"]) {
   rule: QueryModifierRule!
   impacts_root_object: Boolean!
   impacted_fields: [PartitionField!]!
+}
+
+scalar ResponseModifierRule
+
+type ResponseModifierDefinition @meta(module: "modifier") {
+  rule: ResponseModifierRule!
+  impacted_fields: [PartitionDataField!]! @vec
 }

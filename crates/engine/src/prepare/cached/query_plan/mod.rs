@@ -5,9 +5,13 @@ mod prelude;
 mod required_field_set;
 mod selection_set;
 
-use crate::response::{FieldShapeId, Shapes};
+use crate::{
+    prepare::ResponseModifierRecord,
+    response::{FieldShapeId, Shapes},
+};
 pub(crate) use field::*;
 pub(crate) use generated::*;
+use id_newtypes::BitSet;
 pub(crate) use modifier::*;
 use query_solver::TypeConditionSharedVecId;
 pub(crate) use required_field_set::*;
@@ -38,14 +42,17 @@ pub(crate) struct QueryPlan {
     pub partitions: Vec<QueryPartitionRecord>,
     #[indexed_by(PartitionDataFieldId)]
     pub data_fields: Vec<PartitionDataFieldRecord>,
+    pub response_data_fields: BitSet<PartitionDataFieldId>,
     #[indexed_by(PartitionTypenameFieldId)]
     pub typename_fields: Vec<PartitionTypenameFieldRecord>,
+    pub response_typename_fields: BitSet<PartitionTypenameFieldId>,
     pub mutation_partition_order: Vec<QueryPartitionId>,
     #[indexed_by(TypeConditionSharedVecId)]
     pub shared_type_conditions: Vec<CompositeTypeId>,
 
     // deduplicated by rule
-    pub query_modifier_definitions: Vec<QueryModifierDefinitionRecord>,
+    pub query_modifiers: Vec<QueryModifierRecord>,
+    pub response_modifier_definitions: Vec<ResponseModifierDefinitionRecord>,
 
     #[indexed_by(ResponseObjectSetDefinitionId)]
     pub response_object_set_definitions: Vec<ResponseObjectSetDefinitionRecord>,

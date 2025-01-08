@@ -24,7 +24,6 @@ blake3.workspace = true
 bytes.workspace = true
 url.workspace = true
 crossbeam-queue = "0.3.11"
-cynic-parser.workspace = true
 futures-util.workspace = true
 fixedbitset.workspace = true
 futures.workspace = true

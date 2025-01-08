@@ -138,7 +138,7 @@ impl<'op, R: Runtime> Builder<'op, '_, R> {
     ) -> PlanResult<()> {
         let mut impacted_fields = Vec::new();
         for field in impacted_fields_iter {
-            if self.operation_plan.query_modifications.skipped_data_fields[field.id] {
+            if self.operation_plan.query_modifications.response_data_fields[field.id] {
                 continue;
             }
             let (set_id, composite_type_id) = match rule {

@@ -28,8 +28,26 @@ impl<'ctx> PartitionFieldArguments<'ctx> {
         }
     }
 
+    pub(crate) fn view<'v, 's, 'view>(
+        &self,
+        selection_set: &'s InputValueSet,
+        variables: &'v Variables,
+    ) -> PartitionFieldArgumentsView<'view>
+    where
+        'ctx: 'view,
+        'v: 'view,
+        's: 'view,
+    {
+        PartitionFieldArgumentsView {
+            ctx: self.ctx,
+            variables,
+            ids: self.ids,
+            selection_set,
+        }
+    }
+
     #[track_caller]
-    pub fn get_arg_value_as<'v, 't, T: serde::Deserialize<'t>>(&self, name: &str, variables: &'v Variables) -> T
+    pub(crate) fn get_arg_value_as<'v, 't, T: serde::Deserialize<'t>>(&self, name: &str, variables: &'v Variables) -> T
     where
         'v: 't,
         'ctx: 't,
@@ -41,7 +59,11 @@ impl<'ctx> PartitionFieldArguments<'ctx> {
         .expect("Invalid argument type.")
     }
 
-    pub fn get_arg_value_opt<'t, 'v>(&self, name: &str, variables: &'v Variables) -> Option<QueryOrSchemaInputValue<'t>>
+    pub(crate) fn get_arg_value_opt<'t, 'v>(
+        &self,
+        name: &str,
+        variables: &'v Variables,
+    ) -> Option<QueryOrSchemaInputValue<'t>>
     where
         'v: 't,
         'ctx: 't,

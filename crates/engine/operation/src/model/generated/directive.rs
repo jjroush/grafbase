@@ -6,6 +6,9 @@
 use crate::model::{prelude::*, IncludeDirective, IncludeDirectiveRecord, SkipDirective, SkipDirectiveRecord};
 use walker::Walk;
 
+/// Deduplicated
+///
+/// --------------
 /// Generated from:
 ///
 /// ```custom,{.language-graphql}
@@ -60,6 +63,7 @@ impl ExecutableDirectiveId {
     }
 }
 
+/// Deduplicated
 #[derive(Clone, Copy)]
 pub enum ExecutableDirective<'a> {
     Include(IncludeDirective<'a>),

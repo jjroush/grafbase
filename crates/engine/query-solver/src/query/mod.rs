@@ -1,6 +1,6 @@
 pub(crate) mod dot_graph;
 
-use std::marker::PhantomData;
+use std::{collections::HashMap, marker::PhantomData};
 
 use bitflags::bitflags;
 use id_newtypes::IdRange;
@@ -72,8 +72,8 @@ pub struct Query<G: GraphBase, Step> {
     pub fields: Vec<QueryField>,
     #[indexed_by(TypeConditionSharedVecId)]
     pub shared_type_conditions: Vec<CompositeTypeId>,
-    #[indexed_by(DirectiveSharedVecId)]
-    pub shared_directives: Vec<operation::ExecutableDirectiveId>,
+    pub deduplicated_flat_sorted_executable_directives:
+        HashMap<Vec<operation::ExecutableDirectiveId>, DeduplicatedFlatExecutableDirectivesId>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, id_derives::Id)]
@@ -83,7 +83,7 @@ pub struct QueryFieldId(u32);
 pub struct TypeConditionSharedVecId(u32);
 
 #[derive(Clone, Copy, id_derives::Id)]
-pub struct DirectiveSharedVecId(u32);
+pub struct DeduplicatedFlatExecutableDirectivesId(std::num::NonZero<u32>);
 
 #[derive(Clone)]
 pub struct QueryField {
@@ -95,10 +95,10 @@ pub struct QueryField {
     pub definition_id: Option<FieldDefinitionId>,
     pub argument_ids: QueryOrSchemaFieldArgumentIds,
     pub location: Location,
-    pub directive_ids: IdRange<DirectiveSharedVecId>,
+    pub flat_directive_id: Option<DeduplicatedFlatExecutableDirectivesId>,
 }
 
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 pub enum QueryOrSchemaFieldArgumentIds {
     Query(IdRange<FieldArgumentId>),
     Schema(IdRange<SchemaFieldArgumentId>),

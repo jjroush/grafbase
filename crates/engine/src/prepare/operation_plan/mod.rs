@@ -13,8 +13,6 @@ use crate::{
     Runtime,
 };
 
-use super::Variables;
-
 pub async fn plan(
     ctx: &mut PrepareContext<'_, impl Runtime>,
     operation: &CachedOperation,

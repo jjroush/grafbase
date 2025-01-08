@@ -2101,7 +2101,6 @@ dependencies = [
  "blake3",
  "bytes",
  "crossbeam-queue",
- "cynic-parser",
  "engine-auth",
  "engine-config",
  "engine-id-derives",

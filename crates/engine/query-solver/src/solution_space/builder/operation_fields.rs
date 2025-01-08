@@ -3,7 +3,7 @@ use petgraph::stable_graph::NodeIndex;
 use schema::{CompositeTypeId, TypeSystemDirective};
 use walker::Walk;
 
-use crate::{FieldFlags, QueryField};
+use crate::{DeduplicatedFlatExecutableDirectivesId, FieldFlags, QueryField};
 
 use super::{builder::QuerySolutionSpaceBuilder, providable_fields::CreateRequirementTask, SpaceEdge};
 
@@ -36,6 +36,7 @@ where
 
 struct OperationFieldsIngestor<'schema, 'op, 'builder> {
     builder: &'builder mut QuerySolutionSpaceBuilder<'schema, 'op>,
+    // Temporary structures for DFS
     stack: Vec<IngestSelectionSet<'op>>,
     parent_type_conditions: Vec<CompositeTypeId>,
     parent_directive_ids: Vec<ExecutableDirectiveId>,
@@ -161,8 +162,8 @@ where
         let schema = self.builder.schema;
         let query_field_id = {
             let query_position = Some(self.next_query_position());
-            let query = &mut self.builder.query;
             let type_conditions = {
+                let query = &mut self.builder.query;
                 let start = query.shared_type_conditions.len();
                 query
                     .shared_type_conditions
@@ -178,12 +179,7 @@ where
                     definition_id: Some(field.definition_id),
                     argument_ids: field.argument_ids.into(),
                     location: field.location,
-                    directive_ids: {
-                        let start = query.shared_directives.len();
-                        query.shared_directives.extend_from_slice(&self.parent_directive_ids);
-                        query.shared_directives.extend_from_slice(&field.directive_ids);
-                        (start..query.shared_directives.len()).into()
-                    },
+                    flat_directive_id: self.ingest_directives(&field.directive_ids),
                 },
                 operation::Field::Typename(field) => QueryField {
                     query_position,
@@ -193,15 +189,11 @@ where
                     definition_id: None,
                     argument_ids: Default::default(),
                     location: field.location,
-                    directive_ids: {
-                        let start = query.shared_directives.len();
-                        query.shared_directives.extend_from_slice(&self.parent_directive_ids);
-                        (start..query.shared_directives.len()).into()
-                    },
+                    flat_directive_id: self.ingest_directives(&field.directive_ids),
                 },
             };
-            query.fields.push(query_field);
-            (query.fields.len() - 1).into()
+            self.builder.query.fields.push(query_field);
+            (self.builder.query.fields.len() - 1).into()
         };
         let query_field_node_ix = self
             .builder
@@ -260,5 +252,33 @@ where
                 SpaceEdge::TypenameField,
             );
         }
+    }
+
+    fn ingest_directives(
+        &mut self,
+        field_directive_ids: &[ExecutableDirectiveId],
+    ) -> Option<DeduplicatedFlatExecutableDirectivesId> {
+        if self.parent_directive_ids.is_empty() && field_directive_ids.is_empty() {
+            return None;
+        }
+        let mut directives = Vec::with_capacity(self.parent_directive_ids.len() + field_directive_ids.len());
+        directives.extend_from_slice(&self.parent_directive_ids);
+        directives.extend_from_slice(field_directive_ids);
+        directives.sort_unstable();
+
+        let next_id = self
+            .builder
+            .query
+            .deduplicated_flat_sorted_executable_directives
+            .len()
+            .into();
+        Some(
+            *self
+                .builder
+                .query
+                .deduplicated_flat_sorted_executable_directives
+                .entry(directives)
+                .or_insert(next_id),
+        )
     }
 }

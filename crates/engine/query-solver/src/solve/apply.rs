@@ -169,7 +169,7 @@ pub(crate) fn generate_crude_solved_query(
         graph,
         fields: query.fields,
         shared_type_conditions: query.shared_type_conditions,
-        shared_directives: query.shared_directives,
+        deduplicated_flat_sorted_executable_directives: query.deduplicated_flat_sorted_executable_directives,
     };
 
     tracing::debug!(

@@ -11,53 +11,53 @@ use walker::Walk;
 /// Generated from:
 ///
 /// ```custom,{.language-graphql}
-/// union PartitionField @id @meta(module: "field") @variants(remove_suffix: "Field") =
+/// union PartitionField @id @meta(module: "field") @variants(names: ["Data", "Typename"]) =
 ///   | PartitionDataField
 ///   | PartitionTypenameField
 /// ```
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) enum PartitionFieldId {
-    PartitionData(PartitionDataFieldId),
-    PartitionTypename(PartitionTypenameFieldId),
+    Data(PartitionDataFieldId),
+    Typename(PartitionTypenameFieldId),
 }
 
 impl std::fmt::Debug for PartitionFieldId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PartitionFieldId::PartitionData(variant) => variant.fmt(f),
-            PartitionFieldId::PartitionTypename(variant) => variant.fmt(f),
+            PartitionFieldId::Data(variant) => variant.fmt(f),
+            PartitionFieldId::Typename(variant) => variant.fmt(f),
         }
     }
 }
 
 impl From<PartitionDataFieldId> for PartitionFieldId {
     fn from(value: PartitionDataFieldId) -> Self {
-        PartitionFieldId::PartitionData(value)
+        PartitionFieldId::Data(value)
     }
 }
 impl From<PartitionTypenameFieldId> for PartitionFieldId {
     fn from(value: PartitionTypenameFieldId) -> Self {
-        PartitionFieldId::PartitionTypename(value)
+        PartitionFieldId::Typename(value)
     }
 }
 
 #[allow(unused)]
 impl PartitionFieldId {
-    pub(crate) fn is_partition_data(&self) -> bool {
-        matches!(self, PartitionFieldId::PartitionData(_))
+    pub(crate) fn is_data(&self) -> bool {
+        matches!(self, PartitionFieldId::Data(_))
     }
-    pub(crate) fn as_partition_data(&self) -> Option<PartitionDataFieldId> {
+    pub(crate) fn as_data(&self) -> Option<PartitionDataFieldId> {
         match self {
-            PartitionFieldId::PartitionData(id) => Some(*id),
+            PartitionFieldId::Data(id) => Some(*id),
             _ => None,
         }
     }
-    pub(crate) fn is_partition_typename(&self) -> bool {
-        matches!(self, PartitionFieldId::PartitionTypename(_))
+    pub(crate) fn is_typename(&self) -> bool {
+        matches!(self, PartitionFieldId::Typename(_))
     }
-    pub(crate) fn as_partition_typename(&self) -> Option<PartitionTypenameFieldId> {
+    pub(crate) fn as_typename(&self) -> Option<PartitionTypenameFieldId> {
         match self {
-            PartitionFieldId::PartitionTypename(id) => Some(*id),
+            PartitionFieldId::Typename(id) => Some(*id),
             _ => None,
         }
     }
@@ -65,15 +65,15 @@ impl PartitionFieldId {
 
 #[derive(Clone, Copy)]
 pub(crate) enum PartitionField<'a> {
-    PartitionData(PartitionDataField<'a>),
-    PartitionTypename(PartitionTypenameField<'a>),
+    Data(PartitionDataField<'a>),
+    Typename(PartitionTypenameField<'a>),
 }
 
 impl std::fmt::Debug for PartitionField<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PartitionField::PartitionData(variant) => variant.fmt(f),
-            PartitionField::PartitionTypename(variant) => variant.fmt(f),
+            PartitionField::Data(variant) => variant.fmt(f),
+            PartitionField::Typename(variant) => variant.fmt(f),
         }
     }
 }
@@ -90,8 +90,8 @@ impl<'a> Walk<CachedOperationContext<'a>> for PartitionFieldId {
     {
         let ctx: CachedOperationContext<'a> = ctx.into();
         match self {
-            PartitionFieldId::PartitionData(id) => PartitionField::PartitionData(id.walk(ctx)),
-            PartitionFieldId::PartitionTypename(id) => PartitionField::PartitionTypename(id.walk(ctx)),
+            PartitionFieldId::Data(id) => PartitionField::Data(id.walk(ctx)),
+            PartitionFieldId::Typename(id) => PartitionField::Typename(id.walk(ctx)),
         }
     }
 }
@@ -100,25 +100,25 @@ impl<'a> Walk<CachedOperationContext<'a>> for PartitionFieldId {
 impl<'a> PartitionField<'a> {
     pub(crate) fn id(&self) -> PartitionFieldId {
         match self {
-            PartitionField::PartitionData(walker) => PartitionFieldId::PartitionData(walker.id),
-            PartitionField::PartitionTypename(walker) => PartitionFieldId::PartitionTypename(walker.id),
+            PartitionField::Data(walker) => PartitionFieldId::Data(walker.id),
+            PartitionField::Typename(walker) => PartitionFieldId::Typename(walker.id),
         }
     }
-    pub(crate) fn is_partition_data(&self) -> bool {
-        matches!(self, PartitionField::PartitionData(_))
+    pub(crate) fn is_data(&self) -> bool {
+        matches!(self, PartitionField::Data(_))
     }
-    pub(crate) fn as_partition_data(&self) -> Option<PartitionDataField<'a>> {
+    pub(crate) fn as_data(&self) -> Option<PartitionDataField<'a>> {
         match self {
-            PartitionField::PartitionData(item) => Some(*item),
+            PartitionField::Data(item) => Some(*item),
             _ => None,
         }
     }
-    pub(crate) fn is_partition_typename(&self) -> bool {
-        matches!(self, PartitionField::PartitionTypename(_))
+    pub(crate) fn is_typename(&self) -> bool {
+        matches!(self, PartitionField::Typename(_))
     }
-    pub(crate) fn as_partition_typename(&self) -> Option<PartitionTypenameField<'a>> {
+    pub(crate) fn as_typename(&self) -> Option<PartitionTypenameField<'a>> {
         match self {
-            PartitionField::PartitionTypename(item) => Some(*item),
+            PartitionField::Typename(item) => Some(*item),
             _ => None,
         }
     }

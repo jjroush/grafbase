@@ -465,7 +465,7 @@ where
                     definition_id: Some(required_item.field().definition_id),
                     argument_ids: QueryOrSchemaFieldArgumentIds::Schema(required_item.field().sorted_argument_ids),
                     location: self.query[petitioner_field_id].location,
-                    directive_ids: Default::default(),
+                    flat_directive_id: Default::default(),
                 });
                 self.providable_fields_bitset.push(false);
                 self.deleted_fields_bitset.push(false);
