@@ -6,9 +6,7 @@ use query_solver::{
 
 use crate::prepare::PartitionFieldId;
 
-use super::{
-    PartitionDataField, PartitionDataFieldId, RequiredFieldSetItemRecord, RequiredFieldSetRecord, SolveResult,
-};
+use super::{PartitionDataFieldId, RequiredFieldSetItemRecord, RequiredFieldSetRecord, SolveResult};
 
 use super::Solver;
 

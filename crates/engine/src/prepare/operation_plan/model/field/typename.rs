@@ -1,31 +1,30 @@
+use operation::{Location, PositionedResponseKey, TypenameFieldId, TypenameFieldRecord};
 use schema::CompositeType;
 use walker::Walk;
 
-use crate::{
-    operation::{Location, OperationPlanContext, TypenameFieldId, TypenameFieldRecord},
-    response::PositionedResponseKey,
-};
+use crate::prepare::{OperationPlanContext, PartitionTypenameFieldId, PartitionTypenameFieldRecord};
 
 #[derive(Clone, Copy)]
 pub(crate) struct PlanTypenameField<'a> {
-    pub(in crate::operation::plan::model) ctx: OperationPlanContext<'a>,
-    pub(in crate::operation::plan::model) id: TypenameFieldId,
+    pub(in crate::prepare::operation_plan::model) ctx: OperationPlanContext<'a>,
+    pub(in crate::prepare::operation_plan::model) id: PartitionTypenameFieldId,
 }
 
 #[allow(unused)]
 impl<'a> PlanTypenameField<'a> {
     #[allow(clippy::should_implement_trait)]
-    fn as_ref(&self) -> &'a TypenameFieldRecord {
-        &self.ctx.logical_plan[self.id]
+    fn as_ref(&self) -> &'a PartitionTypenameFieldRecord {
+        &self.ctx.cached.query_plan[self.id]
     }
     pub(crate) fn key(&self) -> PositionedResponseKey {
-        self.as_ref().key
+        let field = self.as_ref();
+        field.key.with_position(field.query_position)
     }
     pub(crate) fn location(&self) -> Location {
         self.as_ref().location
     }
     pub(crate) fn type_condition(&self) -> CompositeType<'a> {
-        self.as_ref().type_condition_id.walk(self.ctx.schema)
+        todo!()
     }
 }
 

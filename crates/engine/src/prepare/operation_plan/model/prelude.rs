@@ -1,9 +1,9 @@
 pub(super) use super::OperationPlanContext;
 pub(super) use crate::{
-    operation::{
+    prepare::{
         QueryPartitionId, RequiredFieldSet, RequiredFieldSetRecord, ResponseModifierRule, ResponseObjectSetDefinitionId,
     },
     resolver::Resolver,
-    response::ResponseKey,
 };
+pub(super) use operation::ResponseKey;
 pub(super) use schema::FieldSetRecord;

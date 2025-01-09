@@ -4,7 +4,7 @@ use itertools::Itertools;
 use walker::Walk;
 
 use crate::{
-    operation::{ResponseModifier, ResponseModifierRule},
+    prepare::{ResponseModifier, ResponseModifierRule},
     response::{ErrorCode, GraphqlError, InputResponseObjectSet, ResponseBuilder, ResponseValueId},
     Runtime,
 };
@@ -92,7 +92,7 @@ impl<'ctx, R: Runtime> ExecutionContext<'ctx, R> {
                                 // available for requirements to be sent to subgraphs.
                                 response.make_inacessible(ResponseValueId::Field {
                                     object_id: obj_ref.id,
-                                    key: target_field.key.response_key,
+                                    key: target_field.key,
                                     nullable: true,
                                 });
                             }

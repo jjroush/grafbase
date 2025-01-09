@@ -1,8 +1,7 @@
 use std::cell::{Cell, Ref, RefCell, RefMut};
 
 use crate::{
-    operation::{CachedOperationContext, OperationPlanContext},
-    prepare::PreparedOperation,
+    prepare::{CachedOperationContext, OperationPlanContext, PreparedOperation},
     response::{ResponseValueId, SubgraphResponseRefMut},
 };
 use itertools::Itertools;

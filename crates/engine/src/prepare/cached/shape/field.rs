@@ -5,7 +5,7 @@ use schema::{EnumDefinitionId, ScalarType, Wrapping};
 use walker::Walk;
 
 use crate::{
-    operation::{OperationPlanContext, PartitionDataFieldId},
+    prepare::{OperationPlanContext, PartitionDataFieldId},
     response::GraphqlError,
 };
 
@@ -58,7 +58,7 @@ impl<'a> FieldShape<'a> {
     /// Prefer using Deref unless you need the 'a lifetime.
     #[allow(clippy::should_implement_trait)]
     pub(crate) fn as_ref(&self) -> &'a FieldShapeRecord {
-        &self.ctx.cached.query_plan.shapes[self.id]
+        &self.ctx.cached.shapes[self.id]
     }
 
     pub(crate) fn errors(&self) -> impl Iterator<Item = &'a GraphqlError> + 'a {

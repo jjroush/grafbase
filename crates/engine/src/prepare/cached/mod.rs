@@ -1,20 +1,23 @@
 mod builder;
 mod error;
 mod query_plan;
+mod shape;
 
-use grafbase_telemetry::graphql::{GraphqlOperationAttributes, OperationType};
+use grafbase_telemetry::graphql::OperationType;
 use id_newtypes::IdRange;
-use operation::{Operation, OperationAttributes, OperationContext};
+use operation::{Operation, OperationContext};
 use schema::Schema;
 use walker::{Iter, Walk};
 
 pub(crate) use error::*;
 pub(crate) use query_plan::*;
+pub(crate) use shape::*;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub(crate) struct CachedOperation {
     pub operation: Operation,
     pub query_plan: QueryPlan,
+    pub shapes: Shapes,
 }
 
 /// Solving is divided in roughly three steps:
@@ -60,6 +63,12 @@ impl<'a> CachedOperationContext<'a> {
         self.cached.query_plan.query_modifiers.walk(*self)
     }
 
+    pub(in crate::prepare) fn response_modifier_definitions(
+        &self,
+    ) -> impl Iter<Item = ResponseModifierDefinition<'a>> + 'a {
+        self.cached.query_plan.response_modifier_definitions.walk(*self)
+    }
+
     // pub(in crate::operation) fn response_modifier_rules(
     //     &self,
     // ) -> impl Iter<Item = (ResponseModifierRule, impl Iterator<Item = DataField<'a>> + 'a)> + 'a {
@@ -74,21 +83,5 @@ impl<'a> CachedOperationContext<'a> {
 impl CachedOperation {
     pub(crate) fn ty(&self) -> OperationType {
         self.operation.attributes.ty
-    }
-
-    /// Should be used when a request has errored and we only have the cached attributes
-    pub(crate) fn operation_attributes_for_error(&self) -> GraphqlOperationAttributes {
-        let OperationAttributes {
-            ty,
-            name,
-            sanitized_query,
-        } = self.operation.attributes.clone();
-
-        GraphqlOperationAttributes {
-            ty,
-            name,
-            sanitized_query,
-            complexity_cost: None,
-        }
     }
 }

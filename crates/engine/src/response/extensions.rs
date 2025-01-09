@@ -4,8 +4,7 @@ use serde::Serialize;
 use walker::Walk;
 
 use crate::{
-    operation::{Executable, OperationPlanContext, PlanId},
-    prepare::PreparedOperation,
+    prepare::{Executable, OperationPlanContext, PlanId, PreparedOperation},
     resolver::Resolver,
 };
 

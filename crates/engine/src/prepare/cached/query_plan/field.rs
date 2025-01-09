@@ -4,7 +4,7 @@ mod typename;
 
 use walker::Iter;
 
-use crate::response::FieldShapeId;
+use crate::prepare::FieldShapeId;
 
 pub(crate) use argument::*;
 pub(crate) use data::*;

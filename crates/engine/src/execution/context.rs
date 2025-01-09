@@ -7,9 +7,7 @@ use schema::{HeaderRule, Schema};
 
 use crate::{
     engine::{HooksContext, RequestContext},
-    operation::{CachedOperationContext, OperationPlanContext},
-    prepare::PreparedOperation,
-    response::Shapes,
+    prepare::{CachedOperationContext, OperationPlanContext, PreparedOperation, Shapes},
     Engine, Runtime,
 };
 
@@ -67,7 +65,7 @@ impl<'ctx, R: Runtime> ExecutionContext<'ctx, R> {
     }
 
     pub fn shapes(&self) -> &'ctx Shapes {
-        &self.operation.cached.query_plan.shapes
+        &self.operation.cached.shapes
     }
 }
 

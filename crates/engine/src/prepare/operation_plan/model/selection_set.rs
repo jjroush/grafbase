@@ -1,15 +1,15 @@
 use itertools::Itertools;
 use walker::{Iter, Walk};
 
-use crate::operation::SelectionSetRecord;
+use crate::prepare::PartitionSelectionSetRecord;
 
 use super::{OperationPlanContext, PlanDataField, PlanField, PlanTypenameField};
 
 #[derive(Clone, Copy)]
 pub(crate) struct PlanSelectionSet<'a> {
-    pub(in crate::operation::plan::model) ctx: OperationPlanContext<'a>,
-    pub(in crate::operation::plan::model) item: SelectionSetRecord,
-    pub(in crate::operation::plan::model) requires_typename: bool,
+    pub(in crate::prepare::operation_plan::model) ctx: OperationPlanContext<'a>,
+    pub(in crate::prepare::operation_plan::model) item: PartitionSelectionSetRecord,
+    pub(in crate::prepare::operation_plan::model) requires_typename: bool,
 }
 
 #[allow(unused)]

@@ -2,15 +2,16 @@ use std::num::NonZero;
 
 use id_newtypes::{BitSet, IdToMany};
 use operation::{InputValueContext, Variables};
+use query_solver::QueryOrSchemaFieldArgumentIds;
 use serde::Deserialize;
 use walker::Walk;
 
 use crate::{
     prepare::{
-        CachedOperation, CachedOperationContext, PartitionDataFieldId, PartitionField, PartitionTypenameFieldId,
-        PrepareContext, QueryModifier, QueryModifierRule, RequiredFieldSetItemRecord,
+        CachedOperation, CachedOperationContext, ConcreteShapeId, ErrorCode, FieldShapeId, GraphqlError,
+        PartitionDataFieldId, PartitionField, PartitionTypenameFieldId, PrepareContext, QueryModifier,
+        QueryModifierRule, RequiredFieldSetItemRecord,
     },
-    response::{ConcreteShapeId, ErrorCode, FieldShapeId, GraphqlError},
     Runtime,
 };
 
@@ -40,7 +41,6 @@ impl QueryModifications {
         cached: &CachedOperation,
         variables: &Variables,
     ) -> PlanResult<Self> {
-        let query_plan = &cached.query_plan;
         Builder {
             ctx,
             operation_ctx: CachedOperationContext {
@@ -55,14 +55,14 @@ impl QueryModifications {
             field_shape_id_to_error_ids: Default::default(),
             modifications: QueryModifications {
                 is_any_field_skipped: false,
-                response_data_fields: query_plan.response_data_fields.clone(),
-                response_typename_fields: query_plan.response_typename_fields.clone(),
+                response_data_fields: cached.query_plan.response_data_fields.clone(),
+                response_typename_fields: cached.query_plan.response_typename_fields.clone(),
                 subgraph_request_data_fields: Default::default(),
-                concrete_shape_has_error: BitSet::with_capacity(query_plan.shapes.concrete.len()),
+                concrete_shape_has_error: BitSet::with_capacity(cached.shapes.concrete.len()),
                 errors: Vec::new(),
                 field_shape_id_to_error_ids: Default::default(),
                 root_error_ids: Vec::new(),
-                skipped_field_shapes: BitSet::with_capacity(query_plan.shapes.fields.len()),
+                skipped_field_shapes: BitSet::with_capacity(cached.shapes.fields.len()),
             },
         }
         .build()
@@ -108,7 +108,7 @@ where
                             .unwrap_or_default()
                     });
 
-                    let Some(selected_scope_set) = id.walk(self.ctx.schema()).matches(scope_jwt_claim) else {
+                    if id.walk(self.ctx.schema()).matches(scope_jwt_claim).is_some() {
                         self.handle_authorization_modifier(
                             modifier,
                             AuthorizationModifierResult::Denied(Some(GraphqlError::new(
@@ -120,6 +120,26 @@ where
                     };
                 }
                 QueryModifierRule::AuthorizedField {
+                    directive_id,
+                    definition_id,
+                } => {
+                    let directive = directive_id.walk(self.ctx.schema());
+                    let verdict = self
+                        .ctx
+                        .hooks()
+                        .authorize_edge_pre_execution(
+                            definition_id.walk(self.ctx.schema()),
+                            QueryOrSchemaFieldArgumentIds::default()
+                                .walk(self.operation_ctx)
+                                .view(&directive.arguments, self.input_value_ctx.variables),
+                            directive.metadata(),
+                        )
+                        .await;
+                    if let Err(error) = verdict {
+                        self.handle_authorization_modifier(modifier, AuthorizationModifierResult::Denied(Some(error)));
+                    }
+                }
+                QueryModifierRule::AuthorizedFieldWithArguments {
                     directive_id,
                     definition_id,
                     argument_ids,
@@ -180,8 +200,6 @@ where
     }
 
     fn finalize(mut self) -> QueryModifications {
-        self.modifications.field_shape_id_to_error_ids = self.field_shape_id_to_error_ids.into();
-
         self.modifications.subgraph_request_data_fields = self.modifications.response_data_fields.clone();
         for field in self.operation_ctx.data_fields() {
             if self.modifications.response_data_fields[field.id] {
@@ -193,9 +211,7 @@ where
         // Identify all concrete shapes with errors.
         let mut field_shape_ids_with_errors = self.modifications.field_shape_id_to_error_ids.ids();
         if let Some(mut current) = field_shape_ids_with_errors.next() {
-            'outer: for (concrete_shape_id, shape) in
-                self.operation_ctx.cached.query_plan.shapes.concrete.iter().enumerate()
-            {
+            'outer: for (concrete_shape_id, shape) in self.operation_ctx.cached.shapes.concrete.iter().enumerate() {
                 if current < shape.field_shape_ids.end {
                     let mut i = 0;
                     while let Some(field_shape_id) = shape.field_shape_ids.get(i) {
@@ -220,6 +236,9 @@ where
                 }
             }
         }
+        drop(field_shape_ids_with_errors);
+
+        self.modifications.field_shape_id_to_error_ids = self.field_shape_id_to_error_ids.into();
 
         self.modifications
     }

@@ -10,10 +10,9 @@ use walker::{Iter, Walk};
 
 use crate::{
     execution::ExecutionContext,
-    operation::Plan,
+    prepare::{ConcreteShapeId, FieldShapeRecord, Plan, Shapes},
     response::{
-        ConcreteShapeId, FieldShapeRecord, InputObjectId, ObjectUpdate, ResponseObject, ResponseObjectField,
-        ResponseValue, Shapes, SubgraphResponseRefMut,
+        InputObjectId, ObjectUpdate, ResponseObject, ResponseObjectField, ResponseValue, SubgraphResponseRefMut,
     },
     Runtime,
 };

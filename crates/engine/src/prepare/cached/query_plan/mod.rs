@@ -5,10 +5,6 @@ mod prelude;
 mod required_field_set;
 mod selection_set;
 
-use crate::{
-    prepare::ResponseModifierRecord,
-    response::{FieldShapeId, Shapes},
-};
 pub(crate) use field::*;
 pub(crate) use generated::*;
 use id_newtypes::BitSet;
@@ -16,6 +12,8 @@ pub(crate) use modifier::*;
 use query_solver::TypeConditionSharedVecId;
 pub(crate) use required_field_set::*;
 use schema::CompositeTypeId;
+
+use super::FieldShapeId;
 
 /// The solved operation contains almost all the necessary data to execute the operation. It only
 /// needs to be adjusted with `@skip`, `@include` etc.. This latter step produces the
@@ -56,7 +54,6 @@ pub(crate) struct QueryPlan {
 
     #[indexed_by(ResponseObjectSetDefinitionId)]
     pub response_object_set_definitions: Vec<ResponseObjectSetDefinitionRecord>,
-    pub shapes: Shapes,
 
     // Refs are used to replace a Vec<XId> with a IdRange<XRefId>. IdRange<XRefId> will at most have a size
     // of 2 * u32 while Vec<XId> is 3 words long. And we store everything in a single Vec.

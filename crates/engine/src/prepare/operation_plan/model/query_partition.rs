@@ -2,14 +2,14 @@ use itertools::Itertools;
 use schema::{EntityDefinition, ResolverDefinition};
 use walker::{Iter, Walk};
 
-use crate::operation::{QueryPartitionId, QueryPartitionRecord};
+use crate::prepare::{QueryPartitionId, QueryPartitionRecord};
 
 use super::{OperationPlanContext, PlanDataField, PlanField, PlanSelectionSet, PlanTypenameField};
 
 #[derive(Clone, Copy)]
 pub(crate) struct PlanQueryPartition<'a> {
-    pub(in crate::operation::plan::model) ctx: OperationPlanContext<'a>,
-    pub(in crate::operation::plan::model) id: QueryPartitionId,
+    pub(in crate::prepare::operation_plan::model) ctx: OperationPlanContext<'a>,
+    pub(in crate::prepare::operation_plan::model) id: QueryPartitionId,
 }
 
 #[allow(unused)]
@@ -17,7 +17,7 @@ impl<'a> PlanQueryPartition<'a> {
     // Not providing too easy access to the query partition as it exposes the unfiltered fields
     // before query modifications. It's likely not what you want.
     fn as_ref(&self) -> &'a QueryPartitionRecord {
-        &self.ctx.logical_plan[self.id]
+        &self.ctx.cached.query_plan[self.id]
     }
 
     pub(crate) fn entity_definition(&self) -> EntityDefinition<'a> {

@@ -2,30 +2,26 @@ use operation::Location;
 use schema::FieldDefinition;
 use walker::{Iter, Walk};
 
-use crate::{
-    operation::{
-        CachedOperationContext, DataFieldId, DataFieldRecord, FieldArgument, Location, OperationPlanContext,
-        PartitionDataField, PartitionDataFieldId, PartitionDataFieldRecord, PartitionFieldArguments, PlanSelectionSet,
-    },
-    response::PositionedResponseKey,
+use crate::prepare::{
+    OperationPlanContext, PartitionDataFieldId, PartitionDataFieldRecord, PartitionFieldArguments, PlanSelectionSet,
 };
 
 #[derive(Clone, Copy)]
 pub(crate) struct PlanDataField<'a> {
-    pub(in crate::operation::plan::model) ctx: OperationPlanContext<'a>,
-    pub(in crate::operation::plan::model) id: PartitionDataFieldId,
+    pub(in crate::prepare::operation_plan) ctx: OperationPlanContext<'a>,
+    pub(in crate::prepare::operation_plan) id: PartitionDataFieldId,
 }
 
 #[allow(unused)]
 impl<'a> PlanDataField<'a> {
     #[allow(clippy::should_implement_trait)]
     fn as_ref(&self) -> &'a PartitionDataFieldRecord {
-        &self.ctx.logical_plan[self.id]
+        &self.ctx.cached.query_plan[self.id]
     }
     pub(crate) fn subgraph_response_key_str(&self) -> &'a str {
         let record = self.as_ref();
         let key = record.subgraph_key.unwrap_or(record.key);
-        &self.ctx.operation.response_keys[key]
+        &self.ctx.cached.operation.response_keys[key]
     }
     pub(crate) fn location(&self) -> Location {
         self.as_ref().location

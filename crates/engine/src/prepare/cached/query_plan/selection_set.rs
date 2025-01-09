@@ -1,8 +1,8 @@
 use walker::Iter;
 
-use super::{PartitionDataField, PartitionTypenameField, SelectionSet};
+use super::{PartitionDataField, PartitionSelectionSet, PartitionTypenameField};
 
-impl<'a> SelectionSet<'a> {
+impl<'a> PartitionSelectionSet<'a> {
     pub(crate) fn data_fields(&self) -> impl Iter<Item = PartitionDataField<'a>> + 'a {
         self.data_fields_ordered_by_parent_entity_id_then_key()
     }

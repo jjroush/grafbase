@@ -10,15 +10,11 @@ use query_solver::{
 };
 use schema::{
     CompositeType, CompositeTypeId, Definition, EntityDefinitionId, ResolverDefinitionId, Schema, TypeSystemDirective,
-    TypeSystemDirectiveId,
 };
 use walker::Walk;
 
 use super::*;
-use crate::{
-    response::{ConcreteShapeId, Shapes},
-    utils::BufferPool,
-};
+use crate::utils::BufferPool;
 
 pub(super) struct Solver<'a> {
     schema: &'a Schema,
@@ -61,7 +57,6 @@ impl<'a> Solver<'a> {
                     partitions: Vec::new(),
                     mutation_partition_order: Vec::new(),
                     query_modifiers: Vec::new(),
-                    shapes: Shapes::default(),
                     shared_type_conditions: std::mem::take(&mut solution.shared_type_conditions),
                     field_shape_refs: Vec::new(),
                     data_fields: Vec::with_capacity(solution.fields.len()),
@@ -72,6 +67,7 @@ impl<'a> Solver<'a> {
                     response_modifier_definitions: Vec::new(),
                 },
                 operation,
+                shapes: Shapes::default(),
             },
             node_to_field: vec![None; solution.graph.node_count()],
             solution,
@@ -127,6 +123,7 @@ impl<'a> Solver<'a> {
                 response_typename_fields.set(i.into(), true);
             }
         }
+        self.output.query_plan.response_typename_fields = response_typename_fields;
 
         self.generate_mutation_partition_order_after_partition_generation()?;
 
@@ -173,7 +170,7 @@ impl<'a> Solver<'a> {
         output: CompositeType<'a>,
         mut response_object_set_id: Option<ResponseObjectSetDefinitionId>,
         source_ix: NodeIndex,
-    ) -> (Option<ResponseObjectSetDefinitionId>, SelectionSetRecord) {
+    ) -> (Option<ResponseObjectSetDefinitionId>, PartitionSelectionSetRecord) {
         let mut fields_buffer = self.nested_fields_buffer_pool.pop();
 
         let mut neighbors = self.solution.graph.neighbors(source_ix).detach();
@@ -297,7 +294,7 @@ impl<'a> Solver<'a> {
         }
         self.nested_fields_buffer_pool.push(fields_buffer);
 
-        let selection_set = SelectionSetRecord {
+        let selection_set = PartitionSelectionSetRecord {
             data_field_ids_ordered_by_parent_entity_id_then_key: IdRange::from(
                 data_fields_start..self.output.query_plan.data_fields.len(),
             ),
@@ -408,15 +405,13 @@ impl<'a> Solver<'a> {
                             query_modifiers[*ix].impacted_field_ids.push(field_id.into());
                         }
                         Rule::Resp(rule) => {
-                            let ix = deduplicated_response_modifier_rules
-                                .entry(rule.clone())
-                                .or_insert_with(|| {
-                                    response_modifier_definitions.push(ResponseModifierDefinitionRecord {
-                                        rule,
-                                        impacted_field_ids: Vec::new(),
-                                    });
-                                    response_modifier_definitions.len() - 1
+                            let ix = deduplicated_response_modifier_rules.entry(rule).or_insert_with(|| {
+                                response_modifier_definitions.push(ResponseModifierDefinitionRecord {
+                                    rule,
+                                    impacted_field_ids: Vec::new(),
                                 });
+                                response_modifier_definitions.len() - 1
+                            });
                             response_modifier_definitions[*ix].impacted_field_ids.push(field_id);
                         }
                     }
@@ -461,15 +456,13 @@ impl<'a> Solver<'a> {
                             query_modifiers[*ix].impacted_field_ids.push(field_id.into());
                         }
                         Rule::Resp(rule) => {
-                            let ix = deduplicated_response_modifier_rules
-                                .entry(rule.clone())
-                                .or_insert_with(|| {
-                                    response_modifier_definitions.push(ResponseModifierDefinitionRecord {
-                                        rule,
-                                        impacted_field_ids: Vec::new(),
-                                    });
-                                    response_modifier_definitions.len() - 1
+                            let ix = deduplicated_response_modifier_rules.entry(rule).or_insert_with(|| {
+                                response_modifier_definitions.push(ResponseModifierDefinitionRecord {
+                                    rule,
+                                    impacted_field_ids: Vec::new(),
                                 });
+                                response_modifier_definitions.len() - 1
+                            });
                             response_modifier_definitions[*ix].impacted_field_ids.push(field_id);
                         }
                     }
@@ -570,7 +563,7 @@ fn to_data_field_or_typename_field(
             location: field.location,
             argument_ids: field.argument_ids,
             // All set later
-            selection_set_record: SelectionSetRecord {
+            selection_set_record: PartitionSelectionSetRecord {
                 data_field_ids_ordered_by_parent_entity_id_then_key: IdRange::empty(),
                 typename_field_ids_ordered_by_type_condition_id_then_key: IdRange::empty(),
             },

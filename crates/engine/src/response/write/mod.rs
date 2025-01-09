@@ -10,11 +10,14 @@ use schema::{ObjectDefinitionId, Schema};
 use walker::Walk;
 
 use super::{
-    ConcreteShapeId, DataParts, ErrorCodeCounter, ErrorPathSegment, ExecutedResponse, GraphqlError,
-    InputResponseObjectSet, ObjectIdentifier, OutputResponseObjectSets, Response, ResponseData, ResponseObject,
-    ResponseObjectField, ResponseObjectId, ResponseObjectRef, ResponseValue, ResponseValueId,
+    DataParts, ErrorCodeCounter, ErrorPathSegment, ExecutedResponse, GraphqlError, InputResponseObjectSet,
+    OutputResponseObjectSets, Response, ResponseData, ResponseObject, ResponseObjectField, ResponseObjectId,
+    ResponseObjectRef, ResponseValue, ResponseValueId,
 };
-use crate::{execution::ExecutionError, operation::Plan, prepare::CachedOperation};
+use crate::{
+    execution::ExecutionError,
+    prepare::{CachedOperation, ConcreteShapeId, ObjectIdentifier, Plan},
+};
 pub(crate) use subgraph_response::*;
 
 pub(crate) struct ResponseBuilder {

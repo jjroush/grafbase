@@ -8,7 +8,7 @@ use itertools::Itertools;
 use operation::QueryOrSchemaInputValueId;
 use schema::{CompositeType, EntityDefinition, SubgraphId};
 
-use crate::operation::{PartitionFieldArguments, PlanDataField, PlanQueryPartition, PlanSelectionSet};
+use crate::prepare::{PartitionFieldArguments, PlanDataField, PlanQueryPartition, PlanSelectionSet};
 
 const VARIABLE_PREFIX: &str = "var";
 
@@ -341,11 +341,7 @@ impl QueryBuilderContext {
         Ok(())
     }
 
-    fn write_arguments<'a>(
-        &mut self,
-        buffer: &mut String,
-        arguments: PartitionFieldArguments<'a>,
-    ) -> Result<(), Error> {
+    fn write_arguments(&mut self, buffer: &mut String, arguments: PartitionFieldArguments<'_>) -> Result<(), Error> {
         if arguments.len() != 0 {
             write!(
                 buffer,

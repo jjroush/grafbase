@@ -8,11 +8,13 @@ use serde::{
 use std::fmt;
 use walker::Walk;
 
-use crate::response::{
-    value::ResponseObjectField,
-    write::deserialize::{field::FieldSeed, key::Key, SeedContext},
-    ConcreteShape, ConcreteShapeId, FieldShapeId, FieldShapeRecord, GraphqlError, ObjectIdentifier, ResponseObject,
-    ResponseObjectId, ResponseObjectRef, ResponseValue, ResponseValueId,
+use crate::{
+    prepare::{ConcreteShape, ConcreteShapeId, FieldShapeId, FieldShapeRecord, ObjectIdentifier},
+    response::{
+        value::ResponseObjectField,
+        write::deserialize::{field::FieldSeed, key::Key, SeedContext},
+        GraphqlError, ResponseObject, ResponseObjectId, ResponseObjectRef, ResponseValue, ResponseValueId,
+    },
 };
 
 pub(crate) struct ConcreteShapeSeed<'ctx, 'seed> {
@@ -497,7 +499,7 @@ impl<'ctx> ConcreteShapeFieldsSeed<'ctx, '_> {
     ) -> Result<Option<ObjectDefinitionId>, A::Error> {
         let schema = self.ctx.schema;
         let keys = self.ctx.response_keys();
-        let fields = &self.ctx.prepared_operation.cached.query_plan.shapes[self.field_shape_ids];
+        let fields = &self.ctx.prepared_operation.cached.shapes[self.field_shape_ids];
         let mut maybe_object_definition_id: Option<ObjectDefinitionId> = None;
         while let Some(key) = map.next_key::<Key<'_>>()? {
             let key = key.as_ref();
@@ -534,7 +536,7 @@ impl<'ctx> ConcreteShapeFieldsSeed<'ctx, '_> {
         response_fields: &mut Vec<ResponseObjectField>,
     ) -> Result<(), A::Error> {
         let keys = self.ctx.response_keys();
-        let fields = &self.ctx.prepared_operation.cached.query_plan.shapes[self.field_shape_ids];
+        let fields = &self.ctx.prepared_operation.cached.shapes[self.field_shape_ids];
         while let Some(key) = map.next_key::<Key<'_>>()? {
             let key = key.as_ref();
             let start = fields.partition_point(|field| &keys[field.expected_key] < key);

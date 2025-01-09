@@ -6,10 +6,10 @@ use walker::{Iter, Walk};
 
 use crate::prepare::{
     cached::query_plan::{
-        FieldShapeRefId, QueryPartitionId, RequiredFieldSetRecord, ResponseObjectSetDefinitionId, SelectionSet,
-        SelectionSetRecord,
+        FieldShapeRefId, PartitionSelectionSet, PartitionSelectionSetRecord, QueryPartitionId, RequiredFieldSetRecord,
+        ResponseObjectSetDefinitionId,
     },
-    CachedOperationContext,
+    CachedOperationContext, RequiredFieldSet,
 };
 
 use super::PartitionFieldArguments;
@@ -31,7 +31,7 @@ pub(crate) struct PartitionDataFieldRecord {
     pub shape_ids: IdRange<FieldShapeRefId>,
     pub parent_field_output_id: Option<ResponseObjectSetDefinitionId>,
     pub output_id: Option<ResponseObjectSetDefinitionId>,
-    pub selection_set_record: SelectionSetRecord,
+    pub selection_set_record: PartitionSelectionSetRecord,
     /// Whether __typename should be requested from the subgraph for this selection set
     pub selection_set_requires_typename: bool,
     pub query_partition_id: QueryPartitionId,
@@ -70,8 +70,11 @@ impl<'a> PartitionDataField<'a> {
     pub(crate) fn arguments(&self) -> PartitionFieldArguments<'a> {
         self.as_ref().argument_ids.walk(self.ctx)
     }
-    pub(crate) fn selection_set(&self) -> SelectionSet<'a> {
+    pub(crate) fn selection_set(&self) -> PartitionSelectionSet<'a> {
         self.selection_set_record.walk(self.ctx)
+    }
+    pub(crate) fn required_fields_by_supergraph(&self) -> RequiredFieldSet<'a> {
+        self.as_ref().required_fields_record_by_supergraph.walk(self.ctx)
     }
 }
 

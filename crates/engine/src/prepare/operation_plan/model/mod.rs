@@ -15,9 +15,8 @@ use schema::{EntityDefinitionId, FieldSetRecord, Schema};
 use walker::{Iter, Walk};
 
 use crate::{
-    prepare::{CachedOperation, CachedOperationContext},
+    prepare::{CachedOperation, CachedOperationContext, Shapes},
     resolver::Resolver,
-    response::Shapes,
 };
 
 use super::QueryModifications;
@@ -52,7 +51,7 @@ impl<'ctx> From<OperationPlanContext<'ctx>> for &'ctx Schema {
 
 impl<'ctx> From<OperationPlanContext<'ctx>> for &'ctx Shapes {
     fn from(ctx: OperationPlanContext<'ctx>) -> Self {
-        &ctx.cached.query_plan.shapes
+        &ctx.cached.shapes
     }
 }
 

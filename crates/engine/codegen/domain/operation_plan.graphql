@@ -1,5 +1,6 @@
 scalar OperationPlan
   @domain(
+    name: "plan"
     destination: "src/prepare/operation_plan/model"
     root_module: "prepare/operation_plan/model"
     context_name: "ctx"
@@ -40,5 +41,5 @@ scalar ResponseKey @copy @prelude
 type ResponseModifierTarget @meta(module: "response_modifier/target") {
   set_id: ResponseObjectSetDefinitionId!
   ty: CompositeType!
-  field: DataField!
+  field: PartitionDataField!
 }

@@ -1,5 +1,5 @@
 use crate::{
-    operation::RequiredFieldSetItem,
+    prepare::RequiredFieldSetItem,
     response::{ResponseObject, ResponseValue},
 };
 use schema::{EntityDefinition, InputValueSerdeError};

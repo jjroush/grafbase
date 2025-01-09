@@ -3,7 +3,7 @@ use std::num::NonZero;
 use schema::ObjectDefinitionId;
 use walker::Walk;
 
-use crate::operation::OperationPlanContext;
+use crate::prepare::OperationPlanContext;
 
 use super::ConcreteShapeId;
 
@@ -52,6 +52,6 @@ impl<'a> PolymorphicShape<'a> {
     /// Prefer using Deref unless you need the 'a lifetime.
     #[allow(clippy::should_implement_trait)]
     pub(crate) fn as_ref(&self) -> &'a PolymorphicShapeRecord {
-        &self.ctx.cached.query_plan.shapes[self.id]
+        &self.ctx.cached.shapes[self.id]
     }
 }

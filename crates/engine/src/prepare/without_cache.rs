@@ -83,7 +83,7 @@ impl<R: Runtime> PrepareContext<'_, R> {
         };
 
         let attributes = operation.attributes.clone();
-        let cached = match crate::operation::solve(self.schema(), operation) {
+        let cached = match crate::prepare::solve(self.schema(), operation) {
             Ok(plan) => plan,
             Err(err) => {
                 return Err(Response::request_error(
@@ -93,7 +93,7 @@ impl<R: Runtime> PrepareContext<'_, R> {
             }
         };
 
-        let plan = match crate::operation::plan(self, &cached, &variables).await {
+        let plan = match crate::prepare::plan(self, &cached, &variables).await {
             Ok(plan) => plan,
             Err(err) => {
                 return Err(Response::request_error(

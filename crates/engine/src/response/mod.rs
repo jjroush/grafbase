@@ -3,7 +3,6 @@ mod extensions;
 mod object_set;
 mod path;
 mod read;
-mod shape;
 mod value;
 mod write;
 
@@ -18,7 +17,6 @@ pub(crate) use object_set::*;
 pub(crate) use path::*;
 pub(crate) use read::*;
 use schema::Schema;
-pub(crate) use shape::*;
 pub(crate) use value::*;
 pub(crate) use write::*;
 

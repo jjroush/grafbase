@@ -4,7 +4,9 @@
 //! Generated with: `cargo run -p engine-codegen`
 //! Source file: <engine-codegen dir>/domain/query_plan.graphql
 use crate::prepare::cached::query_plan::{
-    generated::{ResponseObjectSetDefinition, ResponseObjectSetDefinitionId, SelectionSet, SelectionSetRecord},
+    generated::{
+        PartitionSelectionSet, PartitionSelectionSetRecord, ResponseObjectSetDefinition, ResponseObjectSetDefinitionId,
+    },
     prelude::*,
     RequiredFieldSet, RequiredFieldSetRecord,
 };
@@ -17,7 +19,7 @@ use walker::Walk;
 /// type QueryPartition @indexed(id_size: "u16") @meta(module: "query_partition") {
 ///   entity_definition: EntityDefinition!
 ///   resolver_definition: ResolverDefinition!
-///   selection_set: SelectionSet!
+///   selection_set: PartitionSelectionSet!
 ///   required_fields: RequiredFieldSet!
 ///   input: ResponseObjectSetDefinition!
 ///   shape_id: ConcreteShapeId!
@@ -27,7 +29,7 @@ use walker::Walk;
 pub(crate) struct QueryPartitionRecord {
     pub entity_definition_id: EntityDefinitionId,
     pub resolver_definition_id: ResolverDefinitionId,
-    pub selection_set_record: SelectionSetRecord,
+    pub selection_set_record: PartitionSelectionSetRecord,
     pub required_fields_record: RequiredFieldSetRecord,
     pub input_id: ResponseObjectSetDefinitionId,
     pub shape_id: ConcreteShapeId,
@@ -62,7 +64,7 @@ impl<'a> QueryPartition<'a> {
     pub(crate) fn resolver_definition(&self) -> ResolverDefinition<'a> {
         self.resolver_definition_id.walk(self.ctx)
     }
-    pub(crate) fn selection_set(&self) -> SelectionSet<'a> {
+    pub(crate) fn selection_set(&self) -> PartitionSelectionSet<'a> {
         self.selection_set_record.walk(self.ctx)
     }
     pub(crate) fn required_fields(&self) -> RequiredFieldSet<'a> {

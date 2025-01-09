@@ -51,7 +51,7 @@ impl<'a> ResponseModifier<'a> {
     /// Prefer using Deref unless you need the 'a lifetime.
     #[allow(clippy::should_implement_trait)]
     pub(crate) fn as_ref(&self) -> &'a ResponseModifierRecord {
-        &self.ctx.operation_plan[self.id]
+        &self.ctx.plan[self.id]
     }
     pub(crate) fn sorted_targets(&self) -> impl Iter<Item = ResponseModifierTarget<'a>> + 'a {
         self.as_ref().sorted_target_records.walk(self.ctx)

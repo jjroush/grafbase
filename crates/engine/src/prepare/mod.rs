@@ -99,23 +99,6 @@ pub struct CachedOperationAttributes {
     pub sanitized_query: Arc<str>,
 }
 
-impl CachedOperationAttributes {
-    pub fn attributes_for_error(self) -> GraphqlOperationAttributes {
-        let CachedOperationAttributes {
-            ty,
-            name,
-            sanitized_query,
-        } = self;
-
-        GraphqlOperationAttributes {
-            ty,
-            name,
-            sanitized_query,
-            complexity_cost: None,
-        }
-    }
-}
-
 pub(crate) struct PreparedOperation {
     pub cached: Arc<CachedOperation>,
     pub plan: OperationPlan,

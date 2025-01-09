@@ -6,7 +6,8 @@ use walker::Walk;
 
 use crate::{
     execution::ExecutionContext,
-    response::{ConcreteShapeId, GraphqlError, InputObjectId},
+    prepare::ConcreteShapeId,
+    response::{GraphqlError, InputObjectId},
     Runtime,
 };
 

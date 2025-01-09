@@ -133,11 +133,11 @@ impl<'a> IntoIterator for PartitionFieldArguments<'a> {
             ctx: self.ctx,
             args: match self.ids {
                 QueryOrSchemaFieldArgumentIds::Query(ids) => self.ctx.cached.operation[ids]
-                    .into_iter()
+                    .iter()
                     .map(|arg| (arg.definition_id, arg.value_id.into()))
                     .collect(),
                 QueryOrSchemaFieldArgumentIds::Schema(ids) => self.ctx.schema[ids]
-                    .into_iter()
+                    .iter()
                     .map(|arg| (arg.definition_id, arg.value_id.into()))
                     .collect(),
             },
@@ -226,7 +226,7 @@ impl<'a> PartitionFieldArgument<'a> {
     }
 }
 
-struct PartitionFieldArgumentsView<'a> {
+pub(crate) struct PartitionFieldArgumentsView<'a> {
     pub(in crate::prepare::cached::query_plan) ctx: CachedOperationContext<'a>,
     pub(in crate::prepare::cached::query_plan) variables: &'a Variables,
     ids: QueryOrSchemaFieldArgumentIds,
@@ -245,7 +245,7 @@ impl serde::Serialize for PartitionFieldArgumentsView<'_> {
                     query_input_values: &self.ctx.cached.operation.query_input_values,
                     variables: self.variables,
                 };
-                serializer.collect_map(ids.walk(self.ctx).into_iter().filter_map(|arg| {
+                serializer.collect_map(ids.walk(self.ctx).filter_map(|arg| {
                     if let Some(item) = self.selection_set.iter().find(|item| item.id == arg.definition_id) {
                         let value = arg.value_id.walk(ctx);
                         if value.is_undefined() {
@@ -267,15 +267,16 @@ impl serde::Serialize for PartitionFieldArgumentsView<'_> {
                 }))
             }
             QueryOrSchemaFieldArgumentIds::Schema(ids) => {
-                serializer.collect_map(ids.walk(self.ctx).into_iter().filter_map(|arg| {
-                    if let Some(item) = self.selection_set.iter().find(|item| item.id == arg.definition_id) {
-                        Some((
-                            arg.definition().name(),
-                            QueryOrSchemaInputValueView::Schema(arg.value().with_selection_set(&item.subselection)),
-                        ))
-                    } else {
-                        None
-                    }
+                serializer.collect_map(ids.walk(self.ctx).filter_map(|arg| {
+                    self.selection_set
+                        .iter()
+                        .find(|item| item.id == arg.definition_id)
+                        .map(|item| {
+                            (
+                                arg.definition().name(),
+                                QueryOrSchemaInputValueView::Schema(arg.value().with_selection_set(&item.subselection)),
+                            )
+                        })
                 }))
             }
         }
@@ -296,7 +297,7 @@ impl<'de> serde::Deserializer<'de> for PartitionFieldArgumentsView<'de> {
                     query_input_values: &self.ctx.cached.operation.query_input_values,
                     variables: self.variables,
                 };
-                MapDeserializer::new(ids.walk(self.ctx).into_iter().filter_map(|arg| {
+                MapDeserializer::new(ids.walk(self.ctx).filter_map(|arg| {
                     if let Some(item) = self.selection_set.iter().find(|item| item.id == arg.definition_id) {
                         let value = arg.value_id.walk(ctx);
                         if value.is_undefined() {
@@ -318,19 +319,18 @@ impl<'de> serde::Deserializer<'de> for PartitionFieldArgumentsView<'de> {
                 }))
                 .deserialize_any(visitor)
             }
-            QueryOrSchemaFieldArgumentIds::Schema(ids) => {
-                MapDeserializer::new(ids.walk(self.ctx).into_iter().filter_map(|arg| {
-                    if let Some(item) = self.selection_set.iter().find(|item| item.id == arg.definition_id) {
-                        Some((
+            QueryOrSchemaFieldArgumentIds::Schema(ids) => MapDeserializer::new(ids.walk(self.ctx).filter_map(|arg| {
+                self.selection_set
+                    .iter()
+                    .find(|item| item.id == arg.definition_id)
+                    .map(|item| {
+                        (
                             arg.definition().name(),
                             QueryOrSchemaInputValueView::Schema(arg.value().with_selection_set(&item.subselection)),
-                        ))
-                    } else {
-                        None
-                    }
-                }))
-                .deserialize_any(visitor)
-            }
+                        )
+                    })
+            }))
+            .deserialize_any(visitor),
         }
     }
 

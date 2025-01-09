@@ -21,7 +21,7 @@ scalar RequiredFieldSet @record
 type QueryPartition @indexed(id_size: "u16") @meta(module: "query_partition") {
   entity_definition: EntityDefinition!
   resolver_definition: ResolverDefinition!
-  selection_set: SelectionSet!
+  selection_set: PartitionSelectionSet!
   required_fields: RequiredFieldSet!
   input: ResponseObjectSetDefinition!
   shape_id: ConcreteShapeId!
@@ -35,7 +35,7 @@ type ResponseObjectSetDefinition @meta(module: "response_object_set") @indexed(i
 # - SelectionSet -
 # ----------------
 
-type SelectionSet @meta(module: "selection_set", derive: ["Default"]) @copy {
+type PartitionSelectionSet @meta(module: "selection_set", derive: ["Default"]) @copy {
   data_fields_ordered_by_parent_entity_id_then_key: [PartitionDataField!]!
     @field(record_field_name: "data_field_ids_ordered_by_parent_entity_id_then_key")
   typename_fields_ordered_by_type_condition_id_then_key: [PartitionTypenameField!]!

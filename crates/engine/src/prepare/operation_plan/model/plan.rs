@@ -2,9 +2,8 @@ use schema::{EntityDefinition, FieldSetRecord, ResolverDefinition};
 use walker::Walk;
 
 use crate::{
-    prepare::{QueryPartition, ResponseObjectSetDefinitionId},
+    prepare::{ConcreteShape, ConcreteShapeId, QueryPartition, ResponseObjectSetDefinitionId},
     resolver::Resolver,
-    response::{ConcreteShape, ConcreteShapeId},
 };
 
 use super::{Plan, PlanSelectionSet};

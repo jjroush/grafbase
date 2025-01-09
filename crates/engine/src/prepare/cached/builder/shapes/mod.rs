@@ -9,12 +9,9 @@ use walker::Walk;
 
 use crate::{
     prepare::cached::{
-        CachedOperationContext, FieldShapeRefId, PartitionDataField, PartitionDataFieldId, PartitionTypenameField,
-        ResponseObjectSetDefinitionId, SelectionSet,
-    },
-    response::{
-        ConcreteShapeId, ConcreteShapeRecord, FieldShapeId, FieldShapeRecord, ObjectIdentifier, PolymorphicShapeId,
-        PolymorphicShapeRecord, Shape, Shapes,
+        CachedOperationContext, ConcreteShapeId, ConcreteShapeRecord, FieldShapeId, FieldShapeRecord, FieldShapeRefId,
+        ObjectIdentifier, PartitionDataField, PartitionDataFieldId, PartitionSelectionSet, PartitionTypenameField,
+        PolymorphicShapeId, PolymorphicShapeRecord, ResponseObjectSetDefinitionId, Shape, Shapes,
     },
     utils::BufferPool,
 };
@@ -82,7 +79,7 @@ impl Solver<'_> {
             *end = FieldShapeRefId::from(pos + 1);
         }
 
-        self.output.query_plan.shapes = shapes;
+        self.output.shapes = shapes;
         self.output.query_plan.field_shape_refs = field_shape_refs;
     }
 }
@@ -98,7 +95,7 @@ pub(super) struct ShapesBuilder<'ctx> {
 }
 
 impl<'ctx> ShapesBuilder<'ctx> {
-    fn create_root_shape_for(&mut self, selection_set: SelectionSet<'ctx>) -> ConcreteShapeId {
+    fn create_root_shape_for(&mut self, selection_set: PartitionSelectionSet<'ctx>) -> ConcreteShapeId {
         let keys = &self.ctx.cached.operation.response_keys;
 
         let data_fields_sorted_by_response_key_str_then_position = {
@@ -428,6 +425,7 @@ impl<'ctx> ShapesBuilder<'ctx> {
     ) -> partition::Partitioning<ObjectDefinitionId, FixedBitSet> {
         let mut type_condition_and_field_position_in_bitset =
             Vec::with_capacity(typename_fields.len() + data_fields.len());
+        todo!();
         for (i, field) in typename_fields.iter().enumerate() {
             type_condition_and_field_position_in_bitset.push((output.id(), i));
         }

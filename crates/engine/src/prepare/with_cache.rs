@@ -54,7 +54,7 @@ impl<'ctx, R: Runtime> PrepareContext<'ctx, R> {
             }
         };
 
-        let plan = match crate::operation::plan(self, &cached, &variables).await {
+        let plan = match crate::prepare::plan(self, &cached, &variables).await {
             Ok(plan) => plan,
             Err(err) => {
                 return Err(Response::request_error(
