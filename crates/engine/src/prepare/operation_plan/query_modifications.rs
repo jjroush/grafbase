@@ -207,6 +207,10 @@ where
                 self.recursively_include_in_subgraph_request(&field.required_fields_record_by_supergraph);
             }
         }
+        // TODO: Don't include partitions without included subgraph fields.
+        for query_partition in self.operation_ctx.query_partitions() {
+            self.recursively_include_in_subgraph_request(&query_partition.required_fields_record);
+        }
         for id in self.modifications.subgraph_request_data_fields.zeroes() {
             for field_shape_id in id.walk(self.operation_ctx).shapes() {
                 self.modifications.skipped_field_shapes.set(field_shape_id, true);

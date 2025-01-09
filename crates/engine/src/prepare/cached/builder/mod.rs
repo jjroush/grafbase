@@ -223,18 +223,20 @@ impl<'a> Solver<'a> {
                             } else {
                                 None
                             };
-                            let (response_object_set_id, selection_set) = record
+                            if record
                                 .definition_id
                                 .walk(self.schema)
                                 .ty()
                                 .definition()
-                                .as_composite_type()
-                                .map(|_| {
-                                    self.generate_selection_set(query_partition_id, response_object_set_id, target_ix)
-                                })
-                                .unwrap_or_default();
-                            record.selection_set_record = selection_set;
-                            record.output_id = response_object_set_id;
+                                .is_composite_type()
+                            {
+                                let (response_object_set_id, selection_set) =
+                                    self.generate_selection_set(query_partition_id, response_object_set_id, target_ix);
+                                record.output_id = response_object_set_id;
+                                record.selection_set_record = selection_set;
+                            } else {
+                                record.output_id = response_object_set_id;
+                            }
                             fields_buffer.push(NestedField::Data {
                                 record,
                                 node_ix: target_ix,
