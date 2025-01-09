@@ -129,7 +129,7 @@ impl<'op, R: Runtime> Builder<'op, '_, R> {
     fn generate_response_modifier(&mut self, definition: ResponseModifierDefinition<'op>) -> PlanResult<()> {
         let mut impacted_fields = Vec::new();
         for field in definition.impacted_fields() {
-            if self.operation_plan.query_modifications.response_data_fields[field.id] {
+            if !self.operation_plan.query_modifications.response_data_fields[field.id] {
                 continue;
             }
             let (set_id, composite_type_id) = match definition.rule {

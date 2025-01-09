@@ -6,7 +6,7 @@ use crate::{
     resolver::Resolver,
 };
 
-use super::{Plan, PlanSelectionSet};
+use super::{Plan, SubgraphSelectionSet};
 
 impl<'a> Plan<'a> {
     // Not providing too easy access to the query partition as it exposes the unfiltered fields
@@ -24,7 +24,7 @@ impl<'a> Plan<'a> {
     pub(crate) fn resolver_definition(&self) -> ResolverDefinition<'a> {
         self.query_partition().resolver_definition()
     }
-    pub(crate) fn selection_set(&self) -> PlanSelectionSet<'a> {
+    pub(crate) fn selection_set(&self) -> SubgraphSelectionSet<'a> {
         self.ctx.view(self.query_partition_id).selection_set()
     }
     pub(crate) fn shape_id(&self) -> ConcreteShapeId {

@@ -207,6 +207,11 @@ where
                 self.recursively_include_in_subgraph_request(&field.required_fields_record_by_supergraph);
             }
         }
+        for id in self.modifications.subgraph_request_data_fields.zeroes() {
+            for field_shape_id in id.walk(self.operation_ctx).shapes() {
+                self.modifications.skipped_field_shapes.set(field_shape_id, true);
+            }
+        }
 
         // Identify all concrete shapes with errors.
         let mut field_shape_ids_with_errors = self.modifications.field_shape_id_to_error_ids.ids();
@@ -254,7 +259,6 @@ where
 
     fn handle_authorization_modifier(&mut self, modifier: QueryModifier<'op>, result: AuthorizationModifierResult) {
         match result {
-            AuthorizationModifierResult::Granted => {}
             AuthorizationModifierResult::Denied(None) => {
                 todo!()
             }
@@ -271,15 +275,9 @@ where
                         }
                         PartitionField::Data(field) => {
                             self.modifications.response_data_fields.set(field.id, false);
-                            for field_shape_id in field.shapes() {
-                                self.field_shape_id_to_error_ids.push((field_shape_id, error_id));
-                            }
                         }
                     }
                 }
-            }
-            AuthorizationModifierResult::DeniedHiddenIfPossible => {
-                todo!()
             }
         }
     }
@@ -293,9 +291,6 @@ where
                 }
                 PartitionField::Data(field) => {
                     self.modifications.response_data_fields.set(field.id, false);
-                    for field_shape_id in field.shapes() {
-                        self.modifications.skipped_field_shapes.set(field_shape_id, true);
-                    }
                 }
             }
         }
@@ -309,7 +304,5 @@ where
 }
 
 enum AuthorizationModifierResult {
-    Granted,
     Denied(Option<GraphqlError>),
-    DeniedHiddenIfPossible,
 }

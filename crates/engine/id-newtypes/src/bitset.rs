@@ -40,6 +40,13 @@ where
         self.inner.grow(self.inner.len() + 1);
         self.inner.set(self.inner.len() - 1, value);
     }
+
+    pub fn zeroes(&self) -> impl Iterator<Item = Id> + '_
+    where
+        Id: From<usize>,
+    {
+        self.inner.zeroes().map(|ix| Id::from(ix))
+    }
 }
 
 impl<Id> std::ops::Index<Id> for BitSet<Id>

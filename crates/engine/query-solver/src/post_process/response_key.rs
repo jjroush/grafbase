@@ -80,7 +80,7 @@ impl KeyGenerationContext<'_> {
                 match self.query.graph[edge.target()] {
                     Node::Field { id, .. } => {
                         let field = &self.query[id];
-                        selection_set.push_field(subgraph_id, id, field.key);
+                        selection_set.push_field(subgraph_id, id, field.response_key);
                         if let Some(parent_type) = field
                             .definition_id
                             .and_then(|id| id.walk(self.schema).ty().definition_id.as_composite_type())
@@ -98,7 +98,7 @@ impl KeyGenerationContext<'_> {
                             }
                             if let Node::Field { id, .. } = self.query.graph[second_degree_edge.target()] {
                                 let field = &self.query[id];
-                                selection_set.push_field(subgraph_id, id, field.key);
+                                selection_set.push_field(subgraph_id, id, field.response_key);
                                 if let Some(parent_type) = field
                                     .definition_id
                                     .and_then(|id| id.walk(self.schema).ty().definition_id.as_composite_type())
@@ -123,7 +123,7 @@ impl KeyGenerationContext<'_> {
         // Generating a different subgraph key to prevent collisions.
         for (subgraph_id, query_field_id) in selection_set.fields.iter().copied() {
             let query_field = &self.query[query_field_id];
-            let Some((key, definition_id)) = query_field.key.zip(query_field.definition_id) else {
+            let Some((key, definition_id)) = query_field.response_key.zip(query_field.definition_id) else {
                 continue;
             };
             let definition = definition_id.walk(self.schema);
@@ -163,7 +163,7 @@ impl KeyGenerationContext<'_> {
         // Generating a key for extra fields we kept.
         'extra_fields: for (_, id) in &selection_set.fields {
             let query_field = &self.query[*id];
-            if query_field.key.is_some() {
+            if query_field.response_key.is_some() {
                 continue;
             }
             let Some(definition_id) = query_field.definition_id else {
@@ -172,7 +172,7 @@ impl KeyGenerationContext<'_> {
             let definition = definition_id.walk(self.schema).as_ref();
             for (_, other_field_id) in &selection_set.fields {
                 let other_field = &self.query[*other_field_id];
-                let Some(other_key) = other_field.key else {
+                let Some(other_key) = other_field.response_key else {
                     continue;
                 };
                 let Some(other_definition_id) = other_field.definition_id else {
@@ -181,13 +181,13 @@ impl KeyGenerationContext<'_> {
                 let other_definition = other_definition_id.walk(self.schema).as_ref();
                 if other_definition.name_id == definition.name_id && other_definition.ty_record == definition.ty_record
                 {
-                    self.query[*id].key = Some(other_key);
+                    self.query[*id].response_key = Some(other_key);
                     continue 'extra_fields;
                 }
             }
             let key = self.generate_new_key(selection_set, None, definition.name_id);
 
-            self.query[*id].key = Some(key);
+            self.query[*id].response_key = Some(key);
             selection_set.keys.push(key);
         }
     }

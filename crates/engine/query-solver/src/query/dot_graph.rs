@@ -82,7 +82,7 @@ impl Edge {
 }
 
 pub(crate) fn short_field_label<'a>(ctx: OperationContext<'a>, field: &QueryField) -> Cow<'a, str> {
-    if let Some(key) = field.key {
+    if let Some(key) = field.response_key {
         key.walk(ctx).into()
     } else if let Some(def) = field.definition_id {
         def.walk(ctx).name().into()
@@ -93,14 +93,14 @@ pub(crate) fn short_field_label<'a>(ctx: OperationContext<'a>, field: &QueryFiel
 
 pub(crate) fn field_label<'a>(ctx: OperationContext<'a>, field: &QueryField) -> Cow<'a, str> {
     if let Some(definition) = field.definition_id.walk(ctx) {
-        let alias = if let Some(alias) = field.key.walk(ctx).filter(|key| *key != definition.name()) {
+        let alias = if let Some(alias) = field.response_key.walk(ctx).filter(|key| *key != definition.name()) {
             format!("{}: ", alias)
         } else {
             String::new()
         };
         let common = format!("{}.{}", definition.parent_entity().name(), definition.name());
         let subgraph_key = if let Some((_, subgraph_key)) = field
-            .key
+            .response_key
             .zip(field.subgraph_key)
             .filter(|(key, subgraph_key)| key != subgraph_key)
         {
@@ -110,6 +110,6 @@ pub(crate) fn field_label<'a>(ctx: OperationContext<'a>, field: &QueryField) -> 
         };
         Cow::Owned(format!("{alias}{common}{subgraph_key}"))
     } else {
-        field.key.walk(ctx).unwrap_or("__typename").into()
+        field.response_key.walk(ctx).unwrap_or("__typename").into()
     }
 }

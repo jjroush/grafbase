@@ -37,7 +37,7 @@ union Field @id @meta(module: "field") @variants(remove_suffix: true) = DataFiel
 
 "In opposition to a __typename field this field does retrieve data from a subgraph"
 type DataField @meta(module: "field/data", debug: false) @indexed(id_size: "u16") {
-  key: ResponseKey!
+  response_key: ResponseKey!
   location: Location!
   directives: [ExecutableDirective!]!
   definition: FieldDefinition!
@@ -47,7 +47,7 @@ type DataField @meta(module: "field/data", debug: false) @indexed(id_size: "u16"
 
 "__typename field"
 type TypenameField @meta(module: "field/typename") @indexed(id_size: "u16") {
-  key: ResponseKey!
+  response_key: ResponseKey!
   location: Location!
   directives: [ExecutableDirective!]!
 }

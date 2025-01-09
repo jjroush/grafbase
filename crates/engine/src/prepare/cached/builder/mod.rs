@@ -8,9 +8,7 @@ use query_solver::{
     petgraph::{graph::NodeIndex, visit::EdgeRef},
     Edge, Node, QueryField, SolvedQuery,
 };
-use schema::{
-    CompositeType, CompositeTypeId, Definition, EntityDefinitionId, ResolverDefinitionId, Schema, TypeSystemDirective,
-};
+use schema::{Definition, EntityDefinitionId, ResolverDefinitionId, Schema, TypeSystemDirective};
 use walker::Walk;
 
 use super::*;
@@ -146,12 +144,7 @@ impl<'a> Solver<'a> {
         }: QueryPartitionToCreate,
     ) {
         let query_partition_id = QueryPartitionId::from(self.output.query_plan.partitions.len());
-        let (_, selection_set_record) = self.generate_selection_set(
-            query_partition_id,
-            CompositeTypeId::from(entity_definition_id).walk(self.schema),
-            None,
-            source_ix,
-        );
+        let (_, selection_set_record) = self.generate_selection_set(query_partition_id, None, source_ix);
         self.output.query_plan.partitions.push(QueryPartitionRecord {
             entity_definition_id,
             resolver_definition_id,
@@ -167,7 +160,6 @@ impl<'a> Solver<'a> {
     fn generate_selection_set(
         &mut self,
         query_partition_id: QueryPartitionId,
-        output: CompositeType<'a>,
         mut response_object_set_id: Option<ResponseObjectSetDefinitionId>,
         source_ix: NodeIndex,
     ) -> (Option<ResponseObjectSetDefinitionId>, PartitionSelectionSetRecord) {
@@ -237,13 +229,8 @@ impl<'a> Solver<'a> {
                                 .ty()
                                 .definition()
                                 .as_composite_type()
-                                .map(|output| {
-                                    self.generate_selection_set(
-                                        query_partition_id,
-                                        output,
-                                        response_object_set_id,
-                                        target_ix,
-                                    )
+                                .map(|_| {
+                                    self.generate_selection_set(query_partition_id, response_object_set_id, target_ix)
                                 })
                                 .unwrap_or_default();
                             record.selection_set_record = selection_set;
@@ -269,11 +256,12 @@ impl<'a> Solver<'a> {
         let typename_fields_start = self.output.query_plan.typename_fields.len();
 
         fields_buffer.sort_unstable_by_key(|field| match field {
-            NestedField::Data { record, .. } => (
-                record.definition_id.walk(self.schema).parent_entity_id.into(),
-                record.key,
-            ),
-            NestedField::Typename { record, .. } => (output.id(), record.key),
+            NestedField::Data { record, .. } => {
+                (&self.output.query_plan[record.type_condition_ids], record.response_key)
+            }
+            NestedField::Typename { record, .. } => {
+                (&self.output.query_plan[record.type_condition_ids], record.response_key)
+            }
         });
 
         for field in fields_buffer.drain(..) {
@@ -549,7 +537,7 @@ fn to_data_field_or_typename_field(
     schema: &Schema,
     query_partition_id: QueryPartitionId,
 ) -> MaybePartitionFieldRecord {
-    let Some(key) = field.key else {
+    let Some(response_key) = field.response_key else {
         return MaybePartitionFieldRecord::None;
     };
     if let Some(definition_id) = field.definition_id {
@@ -558,7 +546,7 @@ fn to_data_field_or_typename_field(
             query_partition_id,
             definition_id,
             query_position: field.query_position,
-            key,
+            response_key,
             subgraph_key: field.subgraph_key,
             location: field.location,
             argument_ids: field.argument_ids,
@@ -582,7 +570,7 @@ fn to_data_field_or_typename_field(
     } else {
         MaybePartitionFieldRecord::Typename(PartitionTypenameFieldRecord {
             type_condition_ids: field.type_conditions,
-            key,
+            response_key,
             query_position: field.query_position,
             location: field.location,
         })

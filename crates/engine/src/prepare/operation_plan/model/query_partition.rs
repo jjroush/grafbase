@@ -4,7 +4,7 @@ use walker::{Iter, Walk};
 
 use crate::prepare::{QueryPartitionId, QueryPartitionRecord};
 
-use super::{OperationPlanContext, PlanDataField, PlanField, PlanSelectionSet, PlanTypenameField};
+use super::{OperationPlanContext, SubgraphField, SubgraphSelectionSet};
 
 #[derive(Clone, Copy)]
 pub(crate) struct PlanQueryPartition<'a> {
@@ -28,8 +28,8 @@ impl<'a> PlanQueryPartition<'a> {
         self.as_ref().resolver_definition_id.walk(self.ctx)
     }
 
-    pub(crate) fn selection_set(&self) -> PlanSelectionSet<'a> {
-        PlanSelectionSet {
+    pub(crate) fn selection_set(&self) -> SubgraphSelectionSet<'a> {
+        SubgraphSelectionSet {
             ctx: self.ctx,
             item: self.as_ref().selection_set_record,
             // If we may encounter an inaccessible object, we have to detect it

@@ -92,11 +92,11 @@ impl<'ctx, R: Runtime> ExecutionContext<'ctx, R> {
                                 // available for requirements to be sent to subgraphs.
                                 response.make_inacessible(ResponseValueId::Field {
                                     object_id: obj_ref.id,
-                                    key: target_field.key,
+                                    key: target_field.response_key,
                                     nullable: true,
                                 });
                             }
-                            response.push_error(err.clone().with_path((&obj_ref.path, target_field.key)));
+                            response.push_error(err.clone().with_path((&obj_ref.path, target_field.response_key)));
                         }
                     }
                 }

@@ -124,7 +124,7 @@ impl std::fmt::Debug for RequiredFieldSetItem<'_> {
         f.debug_struct("Field")
             .field(
                 "field",
-                &&self.ctx.cached.operation.response_keys[self.data_field().key],
+                &&self.ctx.cached.operation.response_keys[self.data_field().response_key],
             )
             .field("subselection", &self.subselection_record.walk(self.ctx))
             .finish()

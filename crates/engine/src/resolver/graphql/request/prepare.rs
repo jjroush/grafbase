@@ -8,7 +8,7 @@ use itertools::Itertools;
 use operation::QueryOrSchemaInputValueId;
 use schema::{CompositeType, EntityDefinition, SubgraphId};
 
-use crate::prepare::{PartitionFieldArguments, PlanDataField, PlanQueryPartition, PlanSelectionSet};
+use crate::prepare::{PartitionFieldArguments, PlanQueryPartition, SubgraphField, SubgraphSelectionSet};
 
 const VARIABLE_PREFIX: &str = "var";
 
@@ -156,7 +156,7 @@ impl QueryBuilderContext {
         write!(
             out,
             "{}",
-            self.variables.values().format_with(",", |var, f| {
+            self.variables.values().format_with(", ", |var, f| {
                 // no need to add the default value, we'll always provide the variable.
                 f(&format_args!("${VARIABLE_PREFIX}{}: {}", var.idx, var.ty))
             })
@@ -167,7 +167,7 @@ impl QueryBuilderContext {
         &mut self,
         parent_type: ParentType<'_>,
         buffer: &mut String,
-        selection_set: PlanSelectionSet<'_>,
+        selection_set: SubgraphSelectionSet<'_>,
     ) -> Result<(), Error> {
         buffer.push_str(" {");
         let n = buffer.len();
@@ -190,7 +190,7 @@ impl QueryBuilderContext {
         &mut self,
         parent_type: ParentType<'_>,
         buffer: &mut String,
-        selection_set: PlanSelectionSet<'_>,
+        selection_set: SubgraphSelectionSet<'_>,
     ) -> Result<(), Error> {
         let subgraph_id = self.subgraph_id;
 
@@ -293,7 +293,7 @@ impl QueryBuilderContext {
         &mut self,
         buffer: &mut String,
         entity: EntityDefinition<'_>,
-        fields: impl Iterator<Item = PlanDataField<'a>>,
+        fields: impl Iterator<Item = SubgraphField<'a>>,
     ) -> Result<(), Error> {
         write!(buffer, " ... on {} {{", entity.name())?;
 
@@ -309,7 +309,7 @@ impl QueryBuilderContext {
     fn write_fields<'a>(
         &mut self,
         buffer: &mut String,
-        fields: impl Iterator<Item = PlanDataField<'a>>,
+        fields: impl Iterator<Item = SubgraphField<'a>>,
     ) -> Result<(), Error> {
         for field in fields {
             self.write_field(buffer, field)?;
@@ -318,7 +318,7 @@ impl QueryBuilderContext {
         Ok(())
     }
 
-    fn write_field(&mut self, buffer: &mut String, field: PlanDataField<'_>) -> Result<(), Error> {
+    fn write_field(&mut self, buffer: &mut String, field: SubgraphField<'_>) -> Result<(), Error> {
         let response_key = field.subgraph_response_key_str();
         let name = field.definition().name();
         buffer.push(' ');

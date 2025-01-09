@@ -213,6 +213,7 @@ impl<'a> PartitionFieldArgument<'a> {
         }
     }
 
+    #[allow(unused)]
     pub(crate) fn value<'v, 'w>(&self, variables: &'v Variables) -> QueryOrSchemaInputValue<'w>
     where
         'v: 'w,

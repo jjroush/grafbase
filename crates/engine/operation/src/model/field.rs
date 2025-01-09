@@ -8,13 +8,13 @@ use super::{
 
 impl<'a> DataField<'a> {
     pub fn key_str(&self) -> &'a str {
-        &self.ctx.operation.response_keys[self.key]
+        &self.ctx.operation.response_keys[self.response_key]
     }
 }
 
 impl<'a> TypenameField<'a> {
     pub fn key_str(&self) -> &'a str {
-        &self.ctx.operation.response_keys[self.key]
+        &self.ctx.operation.response_keys[self.response_key]
     }
 }
 

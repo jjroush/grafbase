@@ -18,7 +18,7 @@ use super::PartitionFieldArguments;
 pub(crate) struct PartitionDataFieldRecord {
     pub type_condition_ids: IdRange<TypeConditionSharedVecId>,
     pub query_position: Option<QueryPosition>,
-    pub key: ResponseKey,
+    pub response_key: ResponseKey,
     pub subgraph_key: Option<ResponseKey>,
     pub location: Location,
     pub argument_ids: query_solver::QueryOrSchemaFieldArgumentIds,

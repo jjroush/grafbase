@@ -1,8 +1,7 @@
 use id_newtypes::IdRange;
 use operation::{Location, QueryPosition, ResponseKey};
 use query_solver::TypeConditionSharedVecId;
-use schema::CompositeType;
-use walker::{Iter, Walk};
+use walker::Walk;
 
 use crate::prepare::CachedOperationContext;
 
@@ -10,7 +9,7 @@ use crate::prepare::CachedOperationContext;
 pub(crate) struct PartitionTypenameFieldRecord {
     pub type_condition_ids: IdRange<TypeConditionSharedVecId>,
     pub query_position: Option<QueryPosition>,
-    pub key: ResponseKey,
+    pub response_key: ResponseKey,
     pub location: Location,
 }
 
@@ -37,10 +36,6 @@ impl<'a> PartitionTypenameField<'a> {
     pub(crate) fn as_ref(&self) -> &'a PartitionTypenameFieldRecord {
         &self.ctx.cached.query_plan[self.id]
     }
-
-    pub(crate) fn type_conditions(&self) -> impl Iter<Item = CompositeType<'a>> {
-        self.ctx.cached.query_plan[self.as_ref().type_condition_ids].walk(self.ctx)
-    }
 }
 
 impl<'a> Walk<CachedOperationContext<'a>> for PartitionTypenameFieldId {
@@ -63,7 +58,7 @@ impl<'a> Walk<CachedOperationContext<'a>> for PartitionTypenameFieldId {
 impl std::fmt::Debug for PartitionTypenameField<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TypenameField")
-            .field("key", &self.key)
+            .field("key", &self.response_key)
             .field("location", &self.location)
             .finish()
     }

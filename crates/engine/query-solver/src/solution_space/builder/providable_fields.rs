@@ -460,7 +460,7 @@ where
                     // fields with different type conditions? Or do we merge it as a single one?
                     type_conditions: Default::default(),
                     query_position: None,
-                    key: None,
+                    response_key: None,
                     subgraph_key: None,
                     definition_id: Some(required_item.field().definition_id),
                     argument_ids: QueryOrSchemaFieldArgumentIds::Schema(required_item.field().sorted_argument_ids),

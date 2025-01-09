@@ -64,9 +64,9 @@ impl<'schema, 'p> OperationBinder<'schema, 'p> {
 
     fn bind_typename_field(&mut self, field: FieldSelection<'p>) -> BindResult<crate::TypenameFieldId> {
         let directive_ids = self.bind_executable_directive(field.directives())?;
-        let key = self.response_keys.get_or_intern(field.name());
+        let response_key = self.response_keys.get_or_intern(field.alias().unwrap_or(field.name()));
         self.typename_fields.push(crate::TypenameFieldRecord {
-            key,
+            response_key,
             location: self.parsed_operation.span_to_location(field.name_span()),
             directive_ids,
         });
@@ -122,12 +122,12 @@ impl<'schema, 'p> OperationBinder<'schema, 'p> {
 
         let argument_ids = self.bind_field_arguments(definition, field.name_span(), field.arguments())?;
         let directive_ids = self.bind_executable_directive(field.directives())?;
-        let key = self.response_keys.get_or_intern(field.name());
+        let response_key = self.response_keys.get_or_intern(field.alias().unwrap_or(field.name()));
 
         self.data_fields.push(crate::DataFieldRecord {
             definition_id: definition.id,
             directive_ids,
-            key,
+            response_key,
             location: self.parsed_operation.span_to_location(field.name_span()),
             argument_ids,
             selection_set_record,

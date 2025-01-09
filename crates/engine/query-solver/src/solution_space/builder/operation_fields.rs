@@ -174,7 +174,7 @@ where
                 operation::Field::Data(field) => QueryField {
                     query_position,
                     type_conditions,
-                    key: Some(field.key),
+                    response_key: Some(field.response_key),
                     subgraph_key: None,
                     definition_id: Some(field.definition_id),
                     argument_ids: field.argument_ids.into(),
@@ -184,7 +184,7 @@ where
                 operation::Field::Typename(field) => QueryField {
                     query_position,
                     type_conditions,
-                    key: Some(field.key),
+                    response_key: Some(field.response_key),
                     subgraph_key: None,
                     definition_id: None,
                     argument_ids: Default::default(),

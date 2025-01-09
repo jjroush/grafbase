@@ -19,7 +19,7 @@ impl<'a> PartitionDataField<'a> {
 impl std::fmt::Debug for PartitionDataField<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DataPlanField")
-            .field("key", &self.key)
+            .field("key", &self.response_key)
             .field("location", &self.location)
             .field("definition", &self.definition())
             .field("selection_set", &self.selection_set())

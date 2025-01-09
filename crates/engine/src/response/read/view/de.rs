@@ -71,7 +71,7 @@ where
         for selection in self.selection_set.by_ref() {
             let field = selection.data_field();
             let key = field.definition().name();
-            let value = match self.response_object.find_by_response_key(field.key) {
+            let value = match self.response_object.find_by_response_key(field.response_key) {
                 Some(value) => value,
                 None => {
                     // If this field doesn't match the actual response object, meaning this field

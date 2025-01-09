@@ -1,10 +1,12 @@
 mod partition;
 
+use std::borrow::Cow;
+
 use fixedbitset::FixedBitSet;
 use id_newtypes::IdRange;
 use itertools::Itertools;
 use operation::PositionedResponseKey;
-use schema::{CompositeType, CompositeTypeId, Definition, ObjectDefinitionId};
+use schema::{CompositeType, CompositeTypeId, Definition, ObjectDefinitionId, Schema};
 use walker::Walk;
 
 use crate::{
@@ -102,8 +104,8 @@ impl<'ctx> ShapesBuilder<'ctx> {
             let mut fields = self.data_fields_buffer_pool.pop();
             fields.extend(selection_set.data_fields());
             fields.sort_unstable_by(|left, right| {
-                keys[left.key]
-                    .cmp(&keys[right.key])
+                keys[left.response_key]
+                    .cmp(&keys[right.response_key])
                     .then(left.query_position.cmp(&right.query_position))
             });
             fields
@@ -113,8 +115,8 @@ impl<'ctx> ShapesBuilder<'ctx> {
             let mut fields = self.typename_fields_buffer_pool.pop();
             fields.extend(selection_set.typename_fields());
             fields.sort_unstable_by(|left, right| {
-                keys[left.key]
-                    .cmp(&keys[right.key])
+                keys[left.response_key]
+                    .cmp(&keys[right.response_key])
                     .then(left.query_position.cmp(&right.query_position))
             });
             fields
@@ -166,9 +168,9 @@ impl<'ctx> ShapesBuilder<'ctx> {
                     // fields aren't sorted by the response key but by the string value they point
                     // to. However, response keys are deduplicated so the equality also works here
                     // to ensure we only have distinct values.
-                    .map_or(true, |key| key.response_key != field.key)
+                    .map_or(true, |key| key.response_key != field.response_key)
                 {
-                    distinct_typename_response_keys.push(field.key.with_position(field.query_position));
+                    distinct_typename_response_keys.push(field.response_key.with_position(field.query_position));
                 }
             } else {
                 // We've exhausted the typename fields, so we know we're in the data fields now.
@@ -183,11 +185,11 @@ impl<'ctx> ShapesBuilder<'ctx> {
                 for i in included.by_ref() {
                     let field = data_fields_sorted_by_response_key_str_then_position[i - offset];
                     self.data_fields_shape_count[usize::from(field.id)] += 1;
-                    if field.key == first.key {
+                    if field.response_key == first.response_key {
                         group.push(field);
                     } else {
                         let field_shape = self.create_data_field_shape(&mut group, first);
-                        all_expected_keys_equal_response_keys &= field_shape.expected_key == first.key;
+                        all_expected_keys_equal_response_keys &= field_shape.expected_key == first.response_key;
                         field_shapes_buffer.push(field_shape);
                         first = field;
                         group.clear();
@@ -196,7 +198,7 @@ impl<'ctx> ShapesBuilder<'ctx> {
                 }
 
                 let field_shape = self.create_data_field_shape(&mut group, first);
-                all_expected_keys_equal_response_keys &= field_shape.expected_key == first.key;
+                all_expected_keys_equal_response_keys &= field_shape.expected_key == first.response_key;
                 field_shapes_buffer.push(field_shape);
 
                 self.data_fields_buffer_pool.push(group);
@@ -243,8 +245,8 @@ impl<'ctx> ShapesBuilder<'ctx> {
         };
 
         FieldShapeRecord {
-            expected_key: first.subgraph_key.unwrap_or(first.key),
-            key: first.key.with_position(first.query_position),
+            expected_key: first.subgraph_key.unwrap_or(first.response_key),
+            key: first.response_key.with_position(first.query_position),
             id: first.id,
             shape,
             wrapping: ty.wrapping,
@@ -273,13 +275,13 @@ impl<'ctx> ShapesBuilder<'ctx> {
             }
             let keys = &self.ctx.cached.operation.response_keys;
             typename_fields.sort_unstable_by(|left, right| {
-                keys[left.key]
-                    .cmp(&keys[right.key])
+                keys[left.response_key]
+                    .cmp(&keys[right.response_key])
                     .then(left.query_position.cmp(&right.query_position))
             });
             data_fields.sort_unstable_by(|left, right| {
-                keys[left.key]
-                    .cmp(&keys[right.key])
+                keys[left.response_key]
+                    .cmp(&keys[right.response_key])
                     .then(left.query_position.cmp(&right.query_position))
             });
             (data_fields, typename_fields)
@@ -425,26 +427,24 @@ impl<'ctx> ShapesBuilder<'ctx> {
     ) -> partition::Partitioning<ObjectDefinitionId, FixedBitSet> {
         let mut type_condition_and_field_position_in_bitset =
             Vec::with_capacity(typename_fields.len() + data_fields.len());
-        todo!();
         for (i, field) in typename_fields.iter().enumerate() {
-            type_condition_and_field_position_in_bitset.push((output.id(), i));
+            type_condition_and_field_position_in_bitset
+                .push((&self.ctx.cached.query_plan[field.type_condition_ids], i));
         }
         let offset = typename_fields.len();
         for (i, field) in data_fields.iter().enumerate() {
-            type_condition_and_field_position_in_bitset.push((field.definition().parent_entity_id.into(), offset + i));
+            type_condition_and_field_position_in_bitset
+                .push((&self.ctx.cached.query_plan[field.type_condition_ids], offset + i));
         }
         type_condition_and_field_position_in_bitset.sort_unstable();
 
         let type_conditions = type_condition_and_field_position_in_bitset
             .iter()
-            .chunk_by(|(ty, _)| ty)
+            .chunk_by(|(type_conditions, _)| type_conditions)
             .into_iter()
-            .map(|(ty, chunk)| {
-                let possible_types = match ty {
-                    CompositeTypeId::Interface(id) => self.ctx.schema[*id].possible_type_ids.as_slice(),
-                    CompositeTypeId::Union(id) => self.ctx.schema[*id].possible_type_ids.as_slice(),
-                    CompositeTypeId::Object(id) => std::array::from_ref(id),
-                };
+            .map(|(type_conditions, chunk)| {
+                let possible_types =
+                    compute_possible_types(self.ctx.schema, output.possible_type_ids(), type_conditions);
                 let mut bitset = FixedBitSet::with_capacity(type_condition_and_field_position_in_bitset.len());
                 for (_, i) in chunk {
                     bitset.put(*i);
@@ -468,4 +468,56 @@ impl<'ctx> ShapesBuilder<'ctx> {
         self.shapes.polymorphic.push(shape);
         id
     }
+}
+
+fn compute_possible_types<'s>(
+    schema: &'s Schema,
+    output_possible_types: &'s [ObjectDefinitionId],
+    type_conditions: &'s [CompositeTypeId],
+) -> Cow<'s, [ObjectDefinitionId]> {
+    let Some(first) = type_conditions.first() else {
+        return Cow::Borrowed(output_possible_types);
+    };
+    let mut intersection = {
+        let first = first.walk(schema);
+        let first_possible_types = first.possible_type_ids();
+        let mut intersection = Vec::with_capacity(first_possible_types.len().min(output_possible_types.len()));
+        let mut l = 0;
+        let mut r = 0;
+        while let Some((left, right)) = output_possible_types.get(l).zip(first_possible_types.get(r)) {
+            match left.cmp(right) {
+                std::cmp::Ordering::Less => l += 1,
+                std::cmp::Ordering::Greater => r += 1,
+                std::cmp::Ordering::Equal => {
+                    intersection.push(*left);
+                    l += 1;
+                    r += 1;
+                }
+            }
+        }
+        intersection
+    };
+
+    for ty in &type_conditions[1..] {
+        let ty = ty.walk(schema);
+        let possible_types = ty.possible_type_ids();
+        let mut n = 0;
+        let mut l = 0;
+        let mut r = 0;
+        while let Some((left, right)) = intersection.get(l).zip(possible_types.get(r)) {
+            match left.cmp(right) {
+                std::cmp::Ordering::Less => l += 1,
+                std::cmp::Ordering::Greater => r += 1,
+                std::cmp::Ordering::Equal => {
+                    intersection.swap(l, n);
+                    l += 1;
+                    r += 1;
+                    n += 1;
+                }
+            }
+        }
+        intersection.truncate(n);
+    }
+
+    Cow::Owned(intersection)
 }

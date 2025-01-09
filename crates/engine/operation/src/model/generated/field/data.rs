@@ -18,7 +18,7 @@ use walker::{Iter, Walk};
 ///
 /// ```custom,{.language-graphql}
 /// type DataField @meta(module: "field/data", debug: false) @indexed(id_size: "u16") {
-///   key: ResponseKey!
+///   response_key: ResponseKey!
 ///   location: Location!
 ///   directives: [ExecutableDirective!]!
 ///   definition: FieldDefinition!
@@ -28,7 +28,7 @@ use walker::{Iter, Walk};
 /// ```
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct DataFieldRecord {
-    pub key: ResponseKey,
+    pub response_key: ResponseKey,
     pub location: Location,
     pub directive_ids: Vec<ExecutableDirectiveId>,
     pub definition_id: FieldDefinitionId,

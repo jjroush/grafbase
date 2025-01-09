@@ -12,7 +12,7 @@ use super::Solver;
 
 impl Solver<'_> {
     pub(super) fn populate_requirements_after_partition_generation(&mut self) -> SolveResult<()> {
-        debug_assert!(!self.query_partition_to_node.is_empty() && self.node_to_field.is_sorted());
+        debug_assert!(!self.query_partition_to_node.is_empty());
 
         let query_partition_to_node = std::mem::take(&mut self.query_partition_to_node);
         for (query_partition_id, query_partition_root_node_ix) in query_partition_to_node.iter().copied() {

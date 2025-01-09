@@ -17,14 +17,14 @@ use walker::{Iter, Walk};
 ///
 /// ```custom,{.language-graphql}
 /// type TypenameField @meta(module: "field/typename") @indexed(id_size: "u16") {
-///   key: ResponseKey!
+///   response_key: ResponseKey!
 ///   location: Location!
 ///   directives: [ExecutableDirective!]!
 /// }
 /// ```
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct TypenameFieldRecord {
-    pub key: ResponseKey,
+    pub response_key: ResponseKey,
     pub location: Location,
     pub directive_ids: Vec<ExecutableDirectiveId>,
 }
@@ -77,7 +77,7 @@ impl<'a> Walk<OperationContext<'a>> for TypenameFieldId {
 impl std::fmt::Debug for TypenameField<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TypenameField")
-            .field("key", &self.key)
+            .field("response_key", &self.response_key)
             .field("location", &self.location)
             .field("directives", &self.directives())
             .finish()

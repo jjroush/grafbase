@@ -89,7 +89,7 @@ pub struct DeduplicatedFlatExecutableDirectivesId(std::num::NonZero<u32>);
 pub struct QueryField {
     pub type_conditions: IdRange<TypeConditionSharedVecId>,
     pub query_position: Option<QueryPosition>,
-    pub key: Option<ResponseKey>,
+    pub response_key: Option<ResponseKey>,
     pub subgraph_key: Option<ResponseKey>,
     // If absent it's a typename field.
     pub definition_id: Option<FieldDefinitionId>,

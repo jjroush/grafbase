@@ -1,4 +1,4 @@
-use std::ops::BitOrAssign;
+use std::{borrow::Cow, ops::BitOrAssign};
 
 use itertools::Itertools;
 
@@ -44,7 +44,7 @@ pub(super) fn partition_object_shapes<Id, FieldsBitSet>(
     output_possible_types: &[Id],
     // Individual possible types must be sorted and unique
     // Arrays may not be unique, but they should as much as possible.
-    type_conditions: Vec<(&[Id], FieldsBitSet)>,
+    type_conditions: Vec<(Cow<'_, [Id]>, FieldsBitSet)>,
 ) -> Partitioning<Id, FieldsBitSet>
 where
     Id: Copy + Ord + std::fmt::Debug,
@@ -58,7 +58,7 @@ where
     // Detect supersets of the output, they're all treated the same way.
     let (supersets, mut type_conditions): (Vec<_>, Vec<_>) = type_conditions
         .into_iter()
-        .partition(|possible_types| is_superset_of_output_possible_types(possible_types.0, output_possible_types));
+        .partition(|possible_types| is_superset_of_output_possible_types(&possible_types.0, output_possible_types));
 
     // If there are only supersets, no need for any partitions.
     if type_conditions.is_empty() {
@@ -156,7 +156,7 @@ fn is_superset_of_output_possible_types<Id: Copy + Ord>(
 // combination of type conditions applies.
 fn split_into_partitions<Id, FieldsBitSet>(
     output_possible_types: &[Id],
-    type_conditions: &[(&[Id], FieldsBitSet)],
+    type_conditions: &[(Cow<'_, [Id]>, FieldsBitSet)],
     supersets_fields: &FieldsBitSet,
 ) -> Vec<(Vec<Id>, FieldsBitSet)>
 where
@@ -317,7 +317,11 @@ mod tests {
         assert_eq!(
             split_into_partitions(
                 &[1, 2, 3, 4, 5, 6],
-                &[(&[1, 2, 3], 0b0010), (&[3, 4], 0b0100), (&[5, 6], 0b1000)],
+                &[
+                    (vec![1, 2, 3].into(), 0b0010),
+                    (vec![3, 4].into(), 0b0100),
+                    (vec![5, 6].into(), 0b1000)
+                ],
                 &0b0001
             ),
             vec![
@@ -330,7 +334,11 @@ mod tests {
         assert_eq!(
             split_into_partitions(
                 &[3, 4, 5, 6],
-                &[(&[1, 2, 3], 0b0010), (&[3, 4], 0b0100), (&[5, 6], 0b1000)],
+                &[
+                    (vec![1, 2, 3].into(), 0b0010),
+                    (vec![3, 4].into(), 0b0100),
+                    (vec![5, 6].into(), 0b1000)
+                ],
                 &0b0001
             ),
             vec![(vec![3], 0b0111), (vec![4], 0b0101), (vec![5, 6], 0b1001)]
@@ -391,7 +399,7 @@ mod tests {
                 &self.output,
                 self.type_conditions
                     .iter()
-                    .map(|(ids, fields)| (ids.as_slice(), *fields))
+                    .map(|(ids, fields)| (ids.as_slice().into(), *fields))
                     .collect::<Vec<_>>(),
             );
             let actual_partitions = actual
@@ -419,7 +427,7 @@ mod tests {
                 &self.output,
                 self.type_conditions
                     .iter()
-                    .map(|(ids, fields)| (ids.as_slice(), *fields))
+                    .map(|(ids, fields)| (ids.as_slice().into(), *fields))
                     .collect::<Vec<_>>(),
             );
             let actual_partitions = actual
