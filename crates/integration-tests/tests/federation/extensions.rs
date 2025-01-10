@@ -493,31 +493,13 @@ fn complex_query_plan() {
               "queryPlan": {
                 "nodes": [
                   {
+                    "__typename": "IntrospectionResolver"
+                  },
+                  {
                     "__typename": "GraphqlResolver",
                     "subgraphName": "accounts",
                     "request": {
                       "query": "query { me { id username cart { products { name } } } }"
-                    }
-                  },
-                  {
-                    "__typename": "GraphqlResolver",
-                    "subgraphName": "reviews",
-                    "request": {
-                      "query": "query($var0: [_Any!]!) { _entities(representations: $var0) { ... on Product { reviews { author { id } body } } } }"
-                    }
-                  },
-                  {
-                    "__typename": "GraphqlResolver",
-                    "subgraphName": "accounts",
-                    "request": {
-                      "query": "query($var0: [_Any!]!) { _entities(representations: $var0) { ... on User { username } } }"
-                    }
-                  },
-                  {
-                    "__typename": "GraphqlResolver",
-                    "subgraphName": "products",
-                    "request": {
-                      "query": "query($var0: [_Any!]!) { _entities(representations: $var0) { ... on Product { price upc weight(unit: KILOGRAM) } } }"
                     }
                   },
                   {
@@ -535,29 +517,47 @@ fn complex_query_plan() {
                     }
                   },
                   {
-                    "__typename": "IntrospectionResolver"
+                    "__typename": "GraphqlResolver",
+                    "subgraphName": "products",
+                    "request": {
+                      "query": "query($var0: [_Any!]!) { _entities(representations: $var0) { ... on Product { price weight(unit: KILOGRAM) upc } } }"
+                    }
+                  },
+                  {
+                    "__typename": "GraphqlResolver",
+                    "subgraphName": "reviews",
+                    "request": {
+                      "query": "query($var0: [_Any!]!) { _entities(representations: $var0) { ... on Product { reviews { body author { id } } } } }"
+                    }
+                  },
+                  {
+                    "__typename": "GraphqlResolver",
+                    "subgraphName": "accounts",
+                    "request": {
+                      "query": "query($var0: [_Any!]!) { _entities(representations: $var0) { ... on User { username } } }"
+                    }
                   }
                 ],
                 "edges": [
                   [
-                    0,
+                    1,
+                    4
+                  ],
+                  [
+                    2,
                     3
                   ],
                   [
-                    1,
+                    4,
                     2
-                  ],
-                  [
-                    3,
-                    1
-                  ],
-                  [
-                    3,
-                    4
                   ],
                   [
                     4,
                     5
+                  ],
+                  [
+                    5,
+                    6
                   ]
                 ]
               }

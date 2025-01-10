@@ -6,7 +6,7 @@ use im::HashMap;
 use operation::Operation;
 use query_solver::{
     petgraph::{graph::NodeIndex, visit::EdgeRef, Direction},
-    Edge, Node, QueryField, SolvedQuery,
+    Edge, Node, QueryField, QueryFieldId, SolvedQuery,
 };
 use schema::{Definition, EntityDefinitionId, ResolverDefinitionId, Schema, TypeSystemDirective};
 use walker::Walk;
@@ -144,7 +144,7 @@ impl<'a> Solver<'a> {
         }: QueryPartitionToCreate,
     ) {
         let query_partition_id = QueryPartitionId::from(self.output.query_plan.partitions.len());
-        let (_, selection_set_record) = self.generate_selection_set(query_partition_id, None, source_ix);
+        let (_, selection_set_record) = self.generate_selection_set(query_partition_id, source_ix);
         self.output.query_plan.partitions.push(QueryPartitionRecord {
             entity_definition_id,
             resolver_definition_id,
@@ -160,9 +160,9 @@ impl<'a> Solver<'a> {
     fn generate_selection_set(
         &mut self,
         query_partition_id: QueryPartitionId,
-        mut response_object_set_id: Option<ResponseObjectSetDefinitionId>,
         source_ix: NodeIndex,
     ) -> (Option<ResponseObjectSetDefinitionId>, PartitionSelectionSetRecord) {
+        let mut response_object_set_id: Option<ResponseObjectSetDefinitionId> = None;
         let mut fields_buffer = self.nested_fields_buffer_pool.pop();
 
         let mut neighbors = self.solution.graph.neighbors(source_ix).detach();
@@ -192,37 +192,6 @@ impl<'a> Solver<'a> {
                     match to_data_field_or_typename_field(&self.solution[id], self.schema, query_partition_id) {
                         MaybePartitionFieldRecord::None => continue,
                         MaybePartitionFieldRecord::Data(mut record) => {
-                            // If there is any edge with super-graph requirements, means there we'll
-                            // need to read this field.
-                            let response_object_set_id = if self
-                                .solution
-                                .graph
-                                .edges_directed(target_ix, Direction::Incoming)
-                                .any(|edge| matches!(edge.weight(), Edge::RequiredBySupergraph))
-                            {
-                                let definition = record.definition_id.walk(self.schema);
-
-                                if definition
-                                    .directives()
-                                    .filter_map(|directive| directive.as_authorized())
-                                    .any(|auth| auth.fields().is_some())
-                                {
-                                    response_object_set_id.get_or_insert_with(|| {
-                                        self.create_new_response_object_set_definition(source_ix)
-                                    });
-                                }
-                                if definition
-                                    .directives()
-                                    .filter_map(|directive| directive.as_authorized())
-                                    .any(|auth| auth.node().is_some())
-                                {
-                                    Some(self.create_new_response_object_set_definition(target_ix))
-                                } else {
-                                    None
-                                }
-                            } else {
-                                None
-                            };
                             if record
                                 .definition_id
                                 .walk(self.schema)
@@ -230,12 +199,10 @@ impl<'a> Solver<'a> {
                                 .definition()
                                 .is_composite_type()
                             {
-                                let (response_object_set_id, selection_set) =
-                                    self.generate_selection_set(query_partition_id, response_object_set_id, target_ix);
-                                record.output_id = response_object_set_id;
+                                let (nested_response_object_set_id, selection_set) =
+                                    self.generate_selection_set(query_partition_id, target_ix);
+                                record.output_id = nested_response_object_set_id;
                                 record.selection_set_record = selection_set;
-                            } else {
-                                record.output_id = response_object_set_id;
                             }
                             fields_buffer.push(NestedField::Data {
                                 record,
@@ -339,32 +306,66 @@ impl<'a> Solver<'a> {
             Query(QueryModifierRule),
             Resp(ResponseModifierRule),
         }
-        for (node_ix, field_id) in self.node_to_field.iter().enumerate() {
+        let node_to_field = std::mem::take(&mut self.node_to_field);
+        for (node_ix, field_id) in node_to_field.iter().enumerate() {
+            let node_ix = NodeIndex::new(node_ix);
             let Some(field_id) = field_id else {
                 continue;
             };
             if let PartitionFieldId::Data(field_id) = *field_id {
-                let field = &self.output.query_plan[field_id];
-                let definition = field.definition_id.walk(self.schema);
+                let definition = self.output.query_plan[field_id].definition_id.walk(self.schema);
                 for directive in definition.directives() {
                     let rule = match directive {
                         TypeSystemDirective::Authenticated => Rule::Query(QueryModifierRule::Authenticated),
                         TypeSystemDirective::Authorized(dir) => {
                             if dir.node_id.is_some() {
+                                if self.output.query_plan[field_id].output_id.is_none() {
+                                    let output_id = Some(self.create_new_response_object_set_definition(node_ix));
+                                    self.output.query_plan[field_id].output_id = output_id;
+                                    for id in self.output.query_plan[field_id]
+                                        .selection_set_record
+                                        .data_field_ids_ordered_by_parent_entity_id_then_key
+                                    {
+                                        self.output.query_plan[id].parent_field_output_id = output_id;
+                                    }
+                                }
                                 Rule::Resp(ResponseModifierRule::AuthorizedEdgeChild {
                                     directive_id: dir.id,
                                     definition_id: definition.id,
                                 })
                             } else if dir.fields_id.is_some() {
+                                if self.output.query_plan[field_id].parent_field_output_id.is_none() {
+                                    let parent_ix = self
+                                        .solution
+                                        .graph
+                                        .edges_directed(node_ix, Direction::Incoming)
+                                        .find(|edge| matches!(edge.weight(), Edge::Field))
+                                        .expect("Must have a parent field node or root")
+                                        .source();
+                                    let Some(PartitionFieldId::Data(parent_field_id)) =
+                                        node_to_field[parent_ix.index()]
+                                    else {
+                                        tracing::error!("@authorized with fields on root field isn't supported yet");
+                                        return Err(SolveError::InternalError);
+                                    };
+                                    let output_id = Some(self.create_new_response_object_set_definition(parent_ix));
+                                    self.output.query_plan[parent_field_id].output_id = output_id;
+                                    for id in self.output.query_plan[parent_field_id]
+                                        .selection_set_record
+                                        .data_field_ids_ordered_by_parent_entity_id_then_key
+                                    {
+                                        self.output.query_plan[id].parent_field_output_id = output_id;
+                                    }
+                                }
                                 Rule::Resp(ResponseModifierRule::AuthorizedParentEdge {
                                     directive_id: dir.id,
                                     definition_id: definition.id,
                                 })
-                            } else if dir.arguments.is_empty() {
+                            } else if !dir.arguments.is_empty() {
                                 Rule::Query(QueryModifierRule::AuthorizedFieldWithArguments {
                                     directive_id: dir.id,
                                     definition_id: definition.id,
-                                    argument_ids: field.argument_ids,
+                                    argument_ids: self.output.query_plan[field_id].argument_ids,
                                 })
                             } else {
                                 Rule::Query(QueryModifierRule::AuthorizedField {
@@ -413,14 +414,14 @@ impl<'a> Solver<'a> {
                         TypeSystemDirective::Authenticated => Rule::Query(QueryModifierRule::Authenticated),
                         TypeSystemDirective::Authorized(dir) => {
                             if dir.fields_id.is_some() {
-                                Rule::Resp(ResponseModifierRule::AuthorizedParentEdge {
+                                Rule::Resp(ResponseModifierRule::AuthorizedEdgeChild {
                                     directive_id: dir.id,
                                     definition_id: definition.id,
                                 })
                             } else {
-                                Rule::Query(QueryModifierRule::AuthorizedField {
+                                Rule::Query(QueryModifierRule::AuthorizedDefinition {
                                     directive_id: dir.id,
-                                    definition_id: definition.id,
+                                    definition_id: output_definition.id(),
                                 })
                             }
                         }
@@ -458,7 +459,7 @@ impl<'a> Solver<'a> {
                     }
                 }
             }
-            let Node::Field { id, .. } = self.solution.graph[NodeIndex::new(node_ix)] else {
+            let Node::Field { id, .. } = self.solution.graph[node_ix] else {
                 continue;
             };
             if let Some(id) = self.solution[id].flat_directive_id {
@@ -466,6 +467,32 @@ impl<'a> Solver<'a> {
             }
         }
 
+        for directive in self.output.operation.root_object_id.walk(self.schema).directives() {
+            let rule = match directive {
+                TypeSystemDirective::Authenticated => QueryModifierRule::Authenticated,
+                TypeSystemDirective::Authorized(dir) => QueryModifierRule::AuthorizedDefinition {
+                    directive_id: dir.id,
+                    definition_id: self.output.operation.root_object_id.into(),
+                },
+                TypeSystemDirective::RequiresScopes(dir) => QueryModifierRule::RequiresScopes(dir.id),
+                TypeSystemDirective::Cost(_)
+                | TypeSystemDirective::Deprecated(_)
+                | TypeSystemDirective::ListSize(_) => continue,
+            };
+            let ix = deduplicated_query_modifier_rules
+                .entry(rule.clone())
+                .or_insert_with(|| {
+                    query_modifiers.push(QueryModifierRecord {
+                        rule,
+                        impacts_root_object: true,
+                        impacted_field_ids: Vec::new(),
+                    });
+                    query_modifiers.len() - 1
+                });
+            query_modifiers[*ix].impacts_root_object = true;
+        }
+
+        self.node_to_field = node_to_field;
         self.output.query_plan.query_modifiers = query_modifiers;
         self.output.query_plan.response_modifier_definitions = response_modifier_definitions;
 

@@ -108,7 +108,7 @@ where
                             .unwrap_or_default()
                     });
 
-                    if id.walk(self.ctx.schema()).matches(scope_jwt_claim).is_some() {
+                    if id.walk(self.ctx.schema()).matches(scope_jwt_claim).is_none() {
                         self.handle_authorization_modifier(
                             modifier,
                             AuthorizationModifierResult::Denied(Some(GraphqlError::new(
@@ -144,6 +144,7 @@ where
                     definition_id,
                     argument_ids,
                 } => {
+                    tracing::warn!("with args");
                     let directive = directive_id.walk(self.ctx.schema());
                     let verdict = self
                         .ctx
@@ -218,6 +219,7 @@ where
         }
 
         // Identify all concrete shapes with errors.
+        self.modifications.field_shape_id_to_error_ids = self.field_shape_id_to_error_ids.into();
         let mut field_shape_ids_with_errors = self.modifications.field_shape_id_to_error_ids.ids();
         if let Some(mut current) = field_shape_ids_with_errors.next() {
             'outer: for (concrete_shape_id, shape) in self.operation_ctx.cached.shapes.concrete.iter().enumerate() {
@@ -246,8 +248,6 @@ where
             }
         }
         drop(field_shape_ids_with_errors);
-
-        self.modifications.field_shape_id_to_error_ids = self.field_shape_id_to_error_ids.into();
 
         self.modifications
     }
@@ -279,6 +279,9 @@ where
                         }
                         PartitionField::Data(field) => {
                             self.modifications.response_data_fields.set(field.id, false);
+                            for field_shape_id in field.shapes() {
+                                self.field_shape_id_to_error_ids.push((field_shape_id, error_id));
+                            }
                         }
                     }
                 }
