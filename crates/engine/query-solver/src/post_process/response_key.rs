@@ -161,7 +161,7 @@ impl KeyGenerationContext<'_> {
         }
 
         // Generating a key for extra fields we kept.
-        'extra_fields: for (_, id) in &selection_set.fields {
+        for (_, id) in &selection_set.fields {
             let query_field = &self.query[*id];
             if query_field.response_key.is_some() {
                 continue;
@@ -170,21 +170,6 @@ impl KeyGenerationContext<'_> {
                 continue;
             };
             let definition = definition_id.walk(self.schema).as_ref();
-            for (_, other_field_id) in &selection_set.fields {
-                let other_field = &self.query[*other_field_id];
-                let Some(other_key) = other_field.response_key else {
-                    continue;
-                };
-                let Some(other_definition_id) = other_field.definition_id else {
-                    continue;
-                };
-                let other_definition = other_definition_id.walk(self.schema).as_ref();
-                if other_definition.name_id == definition.name_id && other_definition.ty_record == definition.ty_record
-                {
-                    self.query[*id].response_key = Some(other_key);
-                    continue 'extra_fields;
-                }
-            }
             let key = self.generate_new_key(selection_set, None, definition.name_id);
 
             self.query[*id].response_key = Some(key);

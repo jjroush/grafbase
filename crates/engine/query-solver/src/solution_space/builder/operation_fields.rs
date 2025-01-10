@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use operation::{ExecutableDirectiveId, QueryPosition};
 use petgraph::stable_graph::NodeIndex;
 use schema::{CompositeTypeId, TypeSystemDirective};
@@ -18,14 +20,15 @@ where
     'schema: 'op,
 {
     pub(super) fn ingest_operation_fields(&mut self) {
-        let stack = vec![IngestSelectionSet {
+        let queue = vec![IngestSelectionSet {
             parent_query_field_ix: self.query.root_node_ix,
             parent_output_type: CompositeTypeId::Object(self.operation.root_object_id),
             selection_set: self.ctx().root_selection_set(),
-        }];
+        }]
+        .into();
         OperationFieldsIngestor {
             builder: self,
-            stack,
+            queue,
             parent_type_conditions: Vec::new(),
             parent_directive_ids: Vec::new(),
             next_query_position: 0,
@@ -37,7 +40,7 @@ where
 struct OperationFieldsIngestor<'schema, 'op, 'builder> {
     builder: &'builder mut QuerySolutionSpaceBuilder<'schema, 'op>,
     // Temporary structures for DFS
-    stack: Vec<IngestSelectionSet<'op>>,
+    queue: VecDeque<IngestSelectionSet<'op>>,
     parent_type_conditions: Vec<CompositeTypeId>,
     parent_directive_ids: Vec<ExecutableDirectiveId>,
     next_query_position: u16,
@@ -53,9 +56,8 @@ where
             parent_query_field_ix,
             parent_output_type,
             selection_set,
-        }) = self.stack.pop()
+        }) = self.queue.pop_front()
         {
-            self.next_query_position = 0;
             self.parent_type_conditions.clear();
             self.parent_directive_ids.clear();
             self.rec_ingest_selection_set(parent_query_field_ix, parent_output_type, selection_set);
@@ -160,6 +162,7 @@ where
         field: operation::Field<'op>,
     ) {
         let schema = self.builder.schema;
+        tracing::warn!("{}", field.as_data().map(|f| f.definition().name()).unwrap_or_default());
         let query_field_id = {
             let query_position = Some(self.next_query_position());
             let type_conditions = {
@@ -239,7 +242,7 @@ where
                 }
             }
             if let Some(ty) = field_definition.ty().definition_id.as_composite_type() {
-                self.stack.push(IngestSelectionSet {
+                self.queue.push_back(IngestSelectionSet {
                     parent_query_field_ix: query_field_node_ix,
                     parent_output_type: ty,
                     selection_set: field.selection_set(),

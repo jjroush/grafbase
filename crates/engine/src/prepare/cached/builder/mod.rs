@@ -5,7 +5,7 @@ use id_newtypes::{BitSet, IdRange};
 use im::HashMap;
 use operation::Operation;
 use query_solver::{
-    petgraph::{graph::NodeIndex, visit::EdgeRef},
+    petgraph::{graph::NodeIndex, visit::EdgeRef, Direction},
     Edge, Node, QueryField, SolvedQuery,
 };
 use schema::{Definition, EntityDefinitionId, ResolverDefinitionId, Schema, TypeSystemDirective};
@@ -197,7 +197,7 @@ impl<'a> Solver<'a> {
                             let response_object_set_id = if self
                                 .solution
                                 .graph
-                                .edges(target_ix)
+                                .edges_directed(target_ix, Direction::Incoming)
                                 .any(|edge| matches!(edge.weight(), Edge::RequiredBySupergraph))
                             {
                                 let definition = record.definition_id.walk(self.schema);

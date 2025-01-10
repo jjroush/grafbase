@@ -7,22 +7,22 @@ use super::{
 };
 
 impl<'a> DataField<'a> {
-    pub fn key_str(&self) -> &'a str {
+    pub fn response_key_str(&self) -> &'a str {
         &self.ctx.operation.response_keys[self.response_key]
     }
 }
 
 impl<'a> TypenameField<'a> {
-    pub fn key_str(&self) -> &'a str {
+    pub fn response_key_str(&self) -> &'a str {
         &self.ctx.operation.response_keys[self.response_key]
     }
 }
 
 impl<'a> Field<'a> {
-    pub fn key_str(&self) -> &'a str {
+    pub fn response_key_str(&self) -> &'a str {
         match self {
-            Field::Data(data) => data.key_str(),
-            Field::Typename(typename) => typename.key_str(),
+            Field::Data(data) => data.response_key_str(),
+            Field::Typename(typename) => typename.response_key_str(),
         }
     }
 

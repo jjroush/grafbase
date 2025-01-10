@@ -455,10 +455,14 @@ where
                 // Create the QueryField Node
                 let query_field_id = self.query.fields.len().into();
                 self.query.fields.push(QueryField {
-                    // We could be a bit smarter with the type conditions here, but I'm not sure
-                    // how exactly how. If we're more precise, do we add multiple times the same
-                    // fields with different type conditions? Or do we merge it as a single one?
-                    type_conditions: Default::default(),
+                    type_conditions: {
+                        let start = self.query.shared_type_conditions.len();
+                        let tyc = required_item.field().definition().parent_entity_id.as_composite_type();
+                        if tyc != parent_output_type {
+                            self.query.shared_type_conditions.push(tyc);
+                        }
+                        (start..self.query.shared_type_conditions.len()).into()
+                    },
                     query_position: None,
                     response_key: None,
                     subgraph_key: None,
